@@ -115,30 +115,27 @@ app.use(express.static(path.join(__dirname, 'dist')));// Serves static files fro
 /**
  * SERVER CREATION
  */
-/*let httpsEnabled = process.env.HTTPS_ENABLED == 'true' ? true : false
-/*try {
-  if(httpsEnabled){
-    https.createServer({
+try {
+    const params={
       cert: fs.readFileSync(process.env.CRT),
-      key: fs.readFileSync(process.env.KEY),
+      key: fs.readFileSync(process.env.SSL_KEY),
       passphrase: process.env.PASSPHRASE
-    }, app).listen(443, () => {
+    }
+    const testHTTPS=process.env.TEST_HTTPS
+    const mode=process.env.NODE_ENV
+    const condition1=mode =='development' && testHTTPS!='true'
+    const condition2=mode !='production'
+    if(condition1 && condition2) throw new Error('Development mode, creating http server...')
+    https.createServer(params, app).listen(443, () => {
       console.log(`HTTPS Server is running`);
     });
-  }
- if(!httpsOnly){
-  http.createServer(app).listen(80, () => {
-    console.log('HTTP server is running');
-  });
- }   
 } catch (error) { //IF HTTPS FAILED, THEN HTTP SERVER IS CREATED
+  console.log('error: ', error.message);
   http.createServer(app).listen(80, () => {
     console.log('Unable to create HTTPS server, HTTP server is running');
   });
-}*/
-http.createServer(app).listen(80, () => {
-  console.log('HTTP server is running');
-});
+}
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
