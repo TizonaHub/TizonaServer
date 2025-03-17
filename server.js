@@ -116,19 +116,19 @@ app.use(express.static(path.join(__dirname, 'dist')));// Serves static files fro
  * SERVER CREATION
  */
 try {
-    const params={
-      cert: fs.readFileSync(process.env.CRT),
-      key: fs.readFileSync(process.env.SSL_KEY),
-      passphrase: process.env.PASSPHRASE
-    }
-    const testHTTPS=process.env.TEST_HTTPS
-    const mode=process.env.NODE_ENV
-    const condition1=mode =='development' && testHTTPS!='true'
-    const condition2=mode !='production'
-    if(condition1 && condition2) throw new Error('Development mode, creating http server...')
-    https.createServer(params, app).listen(443, () => {
-      console.log(`HTTPS Server is running`);
-    });
+  const params = {
+    cert: fs.readFileSync(process.env.CRT),
+    key: fs.readFileSync(process.env.SSL_KEY),
+    passphrase: process.env.PASSPHRASE
+  }
+  const testHTTPS = process.env.TEST_HTTPS
+  const mode = process.env.NODE_ENV
+  const condition1 = mode == 'development' && testHTTPS != 'true'
+  const condition2 = mode != 'production'
+  if (condition1 && condition2) throw new Error('Development mode, creating http server...')
+  https.createServer(params, app).listen(443, () => {
+    console.log(`HTTPS Server is running`);
+  });
 } catch (error) { //IF HTTPS FAILED, THEN HTTP SERVER IS CREATED
   console.log('error: ', error.message);
   http.createServer(app).listen(80, () => {
@@ -199,7 +199,7 @@ app.post('/api/updateUser', upload.single('file'),
     params.push(id)
     try {
       const result = await dbFuncs.executeQuery(query, params)
-      if(result)return res.send()
+      if (result) return res.send()
     } catch (err) {
       console.error('error at /api/updateUser: ', err.message);
     }
@@ -387,15 +387,20 @@ app.post('/api/getResourceInfo', upload.none(), async (req, res) => {
   else res.sendStatus(500)
 })
 app.get('/api/getCharts', (req, res) => {
-
+  const platform=os.platform()
+  let platformCommand='python'
+  if(platform!='win32')platformCommand='python3'
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
+  let script = execFile(platformCommand, [pythonScriptPath, __dirname])
 
-  let script = execFile('python', [pythonScriptPath, __dirname])
+  script.on('error', (error) => {
+    console.log(error.message, ' at /api/getCharts');
+    return res.sendStatus(500)
+  });
   script.stdout.on('data', (data) => {
     data = JSON.parse(data)
-    res.send(data)
+    return res.send(data)
   })
-
 })
 app.post('/api/createUser', upload.none(),
   body('name').notEmpty().withMessage('empty'),
