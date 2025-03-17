@@ -119,6 +119,16 @@ function getRealUrl(directory) {
   return directory
 
 }
+function getOrigins(){
+  const origins=JSON.parse(process.env.ORIGINS)
+  let array=[]
+  if(origins[0]=="*") return origins
+  origins.map((origin)=>{
+    array.push('http://'+origin)
+    array.push('https://'+origin)
+  })
+  return array
+}
 async function getMimeType(filePath) {
   const mime = await import('mime');
   const mimeType = mime.default.getType(filePath);
@@ -177,5 +187,5 @@ module.exports = {
   getRealUrl, changeResourceLocation, getRandomString,
   getCookie, fileExists, validateJson, validateUpdate,
   checkPathLength,verifyPathAccess,isPrivateDir,getDecodedToken,
-  getMimeType
+  getMimeType,getOrigins
 };

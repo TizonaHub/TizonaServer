@@ -19,17 +19,14 @@ process.loadEnvFile()
 
 const corsOptions = {
   origin: (origin, callback) => {
-    let origins = serverConfig.origins
-    let condition = (origins && origins.indexOf(origin) >= 0) || !origin
-    if (condition) callback(null, true);
-    else if (!origins && origin && origin.startsWith('http://192.')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Access forbidden').message);
-    }
+    let origins = cF.getOrigins(); 
+    if(origins.indexOf('*')>=0 || origin==undefined)return callback(null, true);
+    if (origins.includes(origin)) return callback(null, true);
+    callback(new Error('Access forbidden').message);
   },
   credentials: true,
 };
+
 //VARS
 let saltRounds = 14
 const jwtKey = process.env.JWT_KEY
@@ -375,7 +372,6 @@ app.get('/api/getServerInfo', (req, res) => {
 app.post('/api/getResourceInfo', upload.none(), async (req, res) => {
   const resourcePath = process.env.STATIC + req.body.resourcePath
   const token = cF.getDecodedToken(req)
-  console.log(cF.verifyPathAccess(token, req.body.resourcePath));
   if (!cF.verifyPathAccess(token, req.body.resourcePath)) return res.sendStatus(403)
   const decodedPath = decodeURIComponent(resourcePath);
   const stats = fs.statSync(decodedPath);
@@ -387,14 +383,14 @@ app.post('/api/getResourceInfo', upload.none(), async (req, res) => {
   else res.sendStatus(500)
 })
 app.get('/api/getCharts', (req, res) => {
-  const platform=os.platform()
-  let platformCommand='python'
-  if(platform!='win32')platformCommand='python3'
+  const platform = os.platform()
+  let platformCommand = 'python'
+  if (platform != 'win32') platformCommand = 'python3'
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
   let script = execFile(platformCommand, [pythonScriptPath, __dirname])
 
   script.on('error', (error) => {
-    console.log(error.message, ' at /api/getCharts');
+    console.error(error.message, ' at /api/getCharts');
     return res.sendStatus(500)
   });
   script.stdout.on('data', (data) => {
@@ -413,7 +409,7 @@ app.post('/api/createUser', upload.none(),
     const name = req.body.name
     const username = req.body.username;
     const hash = await bcrypt.hash(req.body.password, saltRounds);
-    const iat = Math.floor(Date.now() / 1000); console.log(iat)
+    const iat = Math.floor(Date.now() / 1000);
     const colors = ['#ff000', '#0080000', '#800080', '#FFA500', '#a52a2a']
     const color = colors[Math.floor(Math.random() * colors.length)]
     let json = JSON.stringify({ profileImage: null, bgColor: color, shadowFilter: 0 });
