@@ -2,7 +2,7 @@ import os
 import shutil
 import json
 import sys
-current_directory = sys.argv[1]
+current_directory = os.getcwd()
 total, used, free = shutil.disk_usage(current_directory)
 
 def get_directory_size(directory):
