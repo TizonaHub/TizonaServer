@@ -86,8 +86,8 @@ function multerErrorHandler(err, req, res, next) {
 }
 
 
+app.use(cors(corsOptions));
 app.use((req, res, next) => {
-  const method = req.method
   const url = req.originalUrl
   if (req.originalUrl.length > 1
     && url.startsWith('/directories')) {
@@ -104,7 +104,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors(corsOptions));
 app.use(express.static(path.join(__dirname, process.env.STATIC)));// Serve static files from the React app 
 app.use(express.static(path.join(__dirname, 'dist')));// Serves static files from the React app 
 
@@ -409,7 +408,6 @@ app.post('/api/createUser', upload.none(),
     const name = req.body.name
     const username = req.body.username;
     const hash = await bcrypt.hash(req.body.password, saltRounds);
-    const iat = Math.floor(Date.now() / 1000);
     const colors = ['#ff000', '#0080000', '#800080', '#FFA500', '#a52a2a']
     const color = colors[Math.floor(Math.random() * colors.length)]
     let json = JSON.stringify({ profileImage: null, bgColor: color, shadowFilter: 0 });
