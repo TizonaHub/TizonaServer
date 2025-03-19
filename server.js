@@ -240,8 +240,10 @@ app.post('/api/getDirectories', upload.none(), async (req, res) => {
     try {
       const token = cF.getCookie('userToken', req.headers.cookie)
       const decoded = jwt.verify(token, jwtKey)
+      const userExists=await dbFuncs.getUserById(decoded.id)
       const path = process.env.STATIC + `/directories/${decoded.id}`
       privateDir = await cF.readDirectory(path, true)
+      if(!userExists) return res.send(directories)
       directories.push({
         type: 'directory',
         name: decoded.id,
@@ -434,7 +436,7 @@ app.get('/api/verifyToken', async (req, res) => {
     let cookie = cF.getCookie('userToken', req.headers.cookie)
     let decodedToken = jwt.verify(cookie, jwtKey)
     let user = await dbFuncs.getUserById(decodedToken.id)
-    if (user == undefined) return res.send()
+    if (user == undefined) return res.sendStatus(400)
     res.send({
       id: user.id, name: user.name, username: user.username,
       role: user.role, avatar: user.avatar
