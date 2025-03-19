@@ -9,7 +9,6 @@ const multer = require('multer');
 const { execFile, spawn } = require('child_process');
 const bcrypt = require('bcrypt');
 const { body, validationResult, param, cookie } = require('express-validator');
-const serverConfig = require('./serverConfig.json');
 const packageJson = require('./package.json')
 let https = require('https')
 let http = require('http')
@@ -19,8 +18,8 @@ process.loadEnvFile()
 
 const corsOptions = {
   origin: (origin, callback) => {
-    let origins = cF.getOrigins(); 
-    if(origins.indexOf('*')>=0 || origin==undefined)return callback(null, true);
+    let origins = cF.getOrigins();
+    if (origins.indexOf('*') >= 0 || origin == undefined) return callback(null, true);
     if (origins.includes(origin)) return callback(null, true);
     callback(new Error('Access forbidden').message);
   },
@@ -359,11 +358,6 @@ app.post('/api/changeResourceLocation', upload.none(), async (req, res) => {
   else return res.send({ message: 'Access denied' });
 
 })
-app.get('/api/getWallpapers', async (req, res) => {
-  let uri = serverConfig.userDirectoryBaseName + '/wallpapers'
-  let wallpapers = await cF.readDirectory(uri)
-  res.send(wallpapers)
-})
 app.get('/api/getServerInfo', (req, res) => {
   return res.send({ version: packageJson.version })
 
@@ -414,26 +408,24 @@ app.post('/api/createUser', upload.none(),
     let query = `insert into users values(?,?,?,?,?,?,default,default);`;
     const adminIsCreated = await dbFuncs.checkAdminUser()
     const role = adminIsCreated ? 0 : 100
-    connection.execute(query, [id, name, username, hash, role, json],
-      (err, results) => {
-        if (err) {
-          console.error(err.message, ' at /api/createUser');
-          return res.status(500).send({ code: err.code })
-        }
-        const user = { id: id, name: name, username: username, role: role }
-        const token = jwt.sign(user, jwtKey, { expiresIn: '365d' });
-        try {
-          const uri = process.env.STATIC + '/directories/' + id
-          fs.mkdir(uri)
-          return res.cookie('userToken', token, {
-            httpOnly: true,
-            maxAge: 31536000000 //1 year 
-          }).send({ user: user, userToken: token })
-        } catch (error) {
-          res.status(500).send({ msg: 'Unable to create folder' })
-        }
-      });
-
+    try {
+      await dbFuncs.executeQuery(query, [id, name, username, hash, role, json])
+      const user = { id: id, name: name, username: username, role: role }
+      const token = jwt.sign(user, jwtKey, { expiresIn: '365d' });
+      try {
+        const uri = process.env.STATIC + '/directories/' + id
+        fs.mkdir(uri)
+        return res.cookie('userToken', token, {
+          httpOnly: true,
+          maxAge: 31536000000 //1 year 
+        }).send({ user: user, userToken: token })
+      } catch (error) {
+        res.status(500).send({ msg: 'Unable to create folder' })
+      }
+    } catch (error) {
+      console.error(err.message, ' at /api/createUser');
+      return res.status(500).send({ code: err.code })
+    }
   })
 
 app.get('/api/verifyToken', async (req, res) => {

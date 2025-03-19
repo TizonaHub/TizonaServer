@@ -1,7 +1,6 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-const serverConfig = require('./serverConfig.json');
 const jwt = require('jsonwebtoken');
 process.loadEnvFile()
 const jwtKey=process.env.JWT_KEY
