@@ -12,6 +12,7 @@ connection.connect((err) => {
     console.error('Unable to connect:', err.stack);
     return;
   }
+  console.log('Connected to database');
 });
 
 async function checkAdminUser() {

@@ -126,9 +126,9 @@ try {
     console.log(`HTTPS Server is running`);
   });
 } catch (error) { //IF HTTPS FAILED, THEN HTTP SERVER IS CREATED
-  console.log('error: ', error.message);
+  console.log('Unable to create HTTPS server, creating HTTP server...');
   http.createServer(app).listen(80, () => {
-    console.log('Unable to create HTTPS server, HTTP server is running');
+    console.log('HTTP server is running');
   });
 }
 
