@@ -176,11 +176,12 @@ async function fileExists(path) {
   }
 }
 function validateUpdate(userToBeUpdated, userUpdating) {
-  if (userUpdating.role < 50) return false
-  const condition1 = (userUpdating.role < 100 && userToBeUpdated.role == 100)
-  const condition2 = (userUpdating.role == userToBeUpdated.role && userUpdating.role < 100)
-  if (condition1 || condition2) return false
-  return true
+  const condition1 = (userUpdating.role == 100 && userToBeUpdated.role == 100)
+  const condition2=(userToBeUpdated.role<userUpdating.role)
+  const condition3 = (userUpdating.id == userToBeUpdated.id)
+  console.log('condition3: ', condition3);
+  if (condition1 || condition2 || condition3) return true
+  return false
 }
 module.exports = {
   readDirectory, deleteDirectory,
