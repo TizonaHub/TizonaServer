@@ -107,6 +107,7 @@ app.use(express.static(path.join(__dirname, process.env.STATIC)));// Serve stati
 app.use(express.static(path.join(__dirname, 'dist')));// Serves static files from the React app 
 
 
+
 /**
  * SERVER CREATION
  */
@@ -130,7 +131,6 @@ try {
     console.log('HTTP server is running');
   });
 }
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
@@ -154,7 +154,6 @@ app.post('/api/updateUser', upload.single('file'),
     } catch (error) {
       return res.status(400).send({ errors: [{ type: 'token', msg: 'unable to decode token' }] })
     }
-
     const propertiesArray = {
       username: req.body.username,
       name: req.body.name,
@@ -425,8 +424,8 @@ app.post('/api/createUser', upload.none(),
         res.status(500).send({ msg: 'Unable to create folder' })
       }
     } catch (error) {
-      console.error(err.message, ' at /api/createUser');
-      return res.status(500).send({ code: err.code })
+      console.error(error, ' at /api/createUser');
+      return res.status(500).send({ code: error.code })
     }
   })
 
