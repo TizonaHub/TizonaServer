@@ -100,7 +100,7 @@ function verifyPathAccess(user, pathParam) {
   pathParam = path.normalize(__dirname + pathParam)
   pathParam = pathParam.split(__dirname)
   if (pathParam.length < 2) return false
-  pathParam = pathParam[1].split('\\').slice(1)
+  pathParam = pathParam[1].split(path.sep).slice(1)
   const condition1 = user && user.id == pathParam[1]
   const condition2 = pathParam[1] == 'publicDirectories'
   if (condition1) return true
