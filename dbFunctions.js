@@ -47,7 +47,6 @@ async function getUserById( id) {
     return new Promise((resolve, reject) => {
         connection.execute('delete from users where id = ?', [id],
             (err, result) => {
-                console.log('result: ', result);
                 if (err) {
                     console.error('Error: ', err);
                     reject(false);

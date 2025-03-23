@@ -179,7 +179,6 @@ function validateUpdate(userToBeUpdated, userUpdating) {
   const condition1 = (userUpdating.role == 100 && userToBeUpdated.role == 100)
   const condition2=(userToBeUpdated.role<userUpdating.role)
   const condition3 = (userUpdating.id == userToBeUpdated.id)
-  console.log('condition3: ', condition3);
   if (condition1 || condition2 || condition3) return true
   return false
 }

@@ -88,7 +88,6 @@ function multerErrorHandler(err, req, res, next) {
 app.use(cors(corsOptions));
 app.use((req, res, next) => {
   const url = req.originalUrl
-  console.log('url: ', url);
   if (req.originalUrl.length > 1
     && url.startsWith('/directories')) {
     const token = cF.getCookie('userToken', req.headers.cookie)
@@ -337,7 +336,6 @@ app.post('/api/deleteResource', upload.none(), (req, res) => {
         throw new Error('You are not able to delete a private folder')
       }
       deleted = cF.deleteDirectory(directory)
-      console.log('directory: ', directory);
       if (!deleted) throw new Error('Unable to delete resource')
       return res.send()
     }
