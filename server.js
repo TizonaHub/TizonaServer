@@ -88,6 +88,7 @@ function multerErrorHandler(err, req, res, next) {
 app.use(cors(corsOptions));
 app.use((req, res, next) => {
   const url = req.originalUrl
+  console.log('url: ', url);
   if (req.originalUrl.length > 1
     && url.startsWith('/directories')) {
     const token = cF.getCookie('userToken', req.headers.cookie)
@@ -442,7 +443,7 @@ app.get('/api/verifyToken', async (req, res) => {
     })
   } catch (error) {
     console.error(error.message, ' on /api/verifyToken');
-    res.status(400).send({ code: 2 })
+    res.sendStatus(400)
   }
 })
 app.get('/api/removeToken', async (req, res) => {
