@@ -97,7 +97,7 @@ app.use((req, res, next) => {
       if (!access) throw new Error('forbidden');
     } catch (error) {
       console.error('error at ' + url + ':' + error.message);
-      return res.sendStatus(403)
+      return res.sendStatus(404)
     }
   }
   next();
