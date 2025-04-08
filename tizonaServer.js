@@ -105,7 +105,8 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, process.env.STATIC)));// Serve static files from the React app 
 app.use(express.static(path.join(__dirname, 'dist')));// Serves static files from the React app 
-
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }));
 
 
 /**
@@ -230,9 +231,9 @@ app.post('/api/postFiles', upload.array('files[]'), (req, res) => {
   res.send()
 })
 app.post('/api/getDirectories', upload.none(), async (req, res) => {
-  let directory = req.body.directory
-  const recursive = req.body.recursive
-  let privateDir = req.body.privateDir //if true, gets private dir
+  let directory = req.body.directory ?? '/directories';
+  const recursive = req.body.recursive || false
+  let privateDir = req.body.privateDir || false //if true, gets private dir
   directory = cF.getRealUrl(directory)
   let directories = await cF.readDirectory(directory, recursive)
   if (privateDir && req.headers.cookie) {
