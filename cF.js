@@ -4,34 +4,36 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 process.loadEnvFile()
 const jwtKey = process.env.JWT_KEY
-async function readDirectory(dir, recursive) {
+async function readDirectory(dir, recursive, userObject) {
+  if(!verifyPathAccess(userObject,dir)) return false
   try {
     const result = [];
     const resources = fs.readdirSync(dir);
     for (const resource of resources) {
-      const resourcePath = dir + '/' + resource
+      const resourcePath = dir  + resource
       const stats = fs.statSync(resourcePath);
-      const prepraredResourcePath = resourcePath.replace(process.env.STATIC, '')
       if (stats.isDirectory()) {
         let data = {
           type: 'directory',
           name: resource,
           children: null,
-          uri: prepraredResourcePath,
+          uri: resourcePath.replace(process.env.STATIC,''),
           size: stats.blksize
         }
-        if (recursive) data.children = await readDirectory(resourcePath, true);
+        if (recursive) data.children = await readDirectory(resourcePath+'/', true,userObject);
         result.push(data);
       } else {
         let mimeType = await getMimeType(resource)
-        if (resource != '.gitkeep')
+        if (resource != '.gitkeep'){
           result.push({
             type: 'file',
             name: resource,
-            uri: prepraredResourcePath,
+            uri: resourcePath.replace(process.env.STATIC,''),
             mimeType: mimeType,
             size: stats.blksize
           });
+
+        }
       }
     };
     return result;

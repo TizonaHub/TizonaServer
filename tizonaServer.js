@@ -13,7 +13,7 @@ const packageJson = require('./package.json')
 let https = require('https')
 let http = require('http')
 let dbFuncs = require('./dbFunctions')
-const os = require('os')
+const os = require('os');
 process.loadEnvFile()
 
 const corsOptions = {
@@ -231,18 +231,20 @@ app.post('/api/postFiles', upload.array('files[]'), (req, res) => {
   res.send()
 })
 app.post('/api/getDirectories', upload.none(), async (req, res) => {
-  let directory = req.body.directory ?? '/directories';
+  const base='/directories/publicDirectories'
+  let directory = req.body.directory ?? '/directories/publicDirectories';
   const recursive = req.body.recursive || false
   let privateDir = req.body.privateDir || false //if true, gets private dir
-  directory = cF.getRealUrl(directory)
+  directory = cF.getRealUrl(base+directory)
   let directories = await cF.readDirectory(directory, recursive)
+  if(!directories) return res.sendStatus(403)
   if (privateDir && req.headers.cookie) {
     try {
       const token = cF.getCookie('userToken', req.headers.cookie)
       const decoded = jwt.verify(token, jwtKey)
       const userExists=await dbFuncs.getUserById(decoded.id)
-      const path = process.env.STATIC + `/directories/${decoded.id}`
-      privateDir = await cF.readDirectory(path, true)
+      const path = process.env.STATIC + `/directories/${decoded.id}/`
+      privateDir = await cF.readDirectory(path, true, decoded)
       if(!userExists) return res.send(directories)
       directories.push({
         type: 'directory',
