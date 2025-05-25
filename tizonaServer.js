@@ -167,7 +167,7 @@ app.patch('/api/resources/rename', upload.none(), (req, res) => { //changeresour
   }
 })
 app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
-  const params=cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
+  const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let resourceUrl = params.resourceUrl || params.resourceUrl;
   if (!resourceUrl) {
     return res.status(400).json({ error: 'Missing required parameter: resourceUrl' });
@@ -216,12 +216,12 @@ app.get('/api/resources/info', async (req, res) => { //getresourceinfo
     res.status(200).send(stats);
   } catch (err) {
     console.error('Error en /api/resources/info:', err.message);
-    res.sendStatus(500); 
+    res.sendStatus(500);
   }
 })
 app.get('/api/resources/directories', async (req, res) => { //getDirectories
   const queryParams = req.query
-  let directory = queryParams['directory'] ?? path.join('directories','publicDirectories');
+  let directory = queryParams['directory'] ?? path.join('directories', 'publicDirectories');
   directory = cF.getAbsPath(directory)
   const recursive = queryParams['recursive'] == 'true'
   let privateDir = queryParams['privateDir'] == 'true' //if true, gets private dir
@@ -251,7 +251,7 @@ app.get('/api/resources/directories', async (req, res) => { //getDirectories
   res.send(directories)
 })
 app.post('/api/resources/directories', upload.none(), (req, res) => { //createdirectory
-  const params=cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
+  const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let uri = params.path || params.path;
   if (!uri) {
     return res.status(400).json({ error: 'Missing required parameter: path' });
@@ -292,7 +292,7 @@ app.patch('/api/resources/move', upload.none(), async (req, res) => {
     if (!success) {
       return res.status(500).send({ message: 'Failed to move the resource.' });
     }
-    return res.send(); 
+    return res.send();
   } catch (err) {
     console.error('Error en /api/resources/move:', err.message);
     return res.sendStatus(500);
@@ -310,6 +310,7 @@ app.put('/api/users', upload.single('file'), //updateUser
   body('password').if((value, { req }) => req.body.password !== undefined)
     .isLength({ min: 8, max: 25 }).withMessage('length'),
   async (req, res) => {
+    if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send(errors)
     let decodedToken = null
@@ -384,6 +385,7 @@ WHERE id = ?`;
   });
 app.delete('/api/users/:id', upload.none(), async (req, res) => { //deleteUser
   const deleteUserId = req.params.id;
+  if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
   if (!deleteUserId) {
     return res.status(400).json({ error: 'Missing required parameter: id' });
   }
@@ -402,6 +404,7 @@ app.delete('/api/users/:id', upload.none(), async (req, res) => { //deleteUser
 
 })
 app.get('/api/users', async (req, res) => { //getUsers
+  if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
   const result = await dbFuncs.getUsers()
   res.send(result)
 })
@@ -410,6 +413,7 @@ app.post('/api/users', upload.none(), //createUser
   body('username').notEmpty().withMessage('empty'),
   body('password').notEmpty().withMessage('empty').isLength({ min: 8, max: 25 }).withMessage('length')
   , async (req, res) => {
+  if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send()
     const id = cF.getRandomString()
@@ -473,6 +477,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
  *  AUTH
  */
 app.get('/api/auth/me', async (req, res) => { //verifyToken
+  if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
   if (!req.headers.cookie) return res.sendStatus(400);
   try {
     let cookie = cF.getCookie('userToken', req.headers.cookie)
@@ -500,6 +505,7 @@ app.get('/api/auth/logout', async (req, res) => { //removeToken
   }
 })
 app.post('/api/auth/login', upload.none(), async (req, res) => { ///api/authenticateUser
+  if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
   const password = req.body.password
   const username = req.body.username
   if (!username || !password) return res.sendStatus(400)

@@ -9,13 +9,17 @@ const connection = mysql.createConnection({
 
 connection.connect((err) => {
   if (err) {
-    console.error('Unable to connect:', err.stack);
+    console.error('Unable to connect:', err.message);
     return;
   }
   console.log('Connected to database');
 });
-
+function getConnectionStatus(){
+    if(connection._closing) return false
+    return true
+}
 async function checkAdminUser() {
+    if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute('select count(*) from users where users.role=100',
             (err, result) => {
@@ -31,6 +35,7 @@ async function checkAdminUser() {
 
 }
 async function getUserById( id) {
+    if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute('select id,name,username,role,tokenMinDate,createdAt,avatar from users where id = ?', [id],
             (err, result) => {
@@ -44,6 +49,7 @@ async function getUserById( id) {
     });
 
 }async function deleteUserById( id) {
+    if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute('delete from users where id = ?', [id],
             (err, result) => {
@@ -58,6 +64,7 @@ async function getUserById( id) {
 
 }
 async function getUsers() {
+    if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute(`select id,name,username,role,tokenMinDate
             ,createdAt,avatar from users order by role desc, username`,
@@ -73,6 +80,7 @@ async function getUsers() {
 
 }
 async function checkCredentials( username, password) {
+    if (connection._closing) return false
     try {
         let user= await new Promise((resolve, reject) => {
             connection.execute(
@@ -98,6 +106,8 @@ async function checkCredentials( username, password) {
     }
 }
 async function executeQuery(query, params) {
+    console.log('query: ', query);
+    if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute(query, params, (err, results) => {
             if (err) {
@@ -111,5 +121,5 @@ async function executeQuery(query, params) {
 
 
 module.exports = {
-    checkAdminUser, getUserById, checkCredentials,getUsers,deleteUserById,executeQuery
+    checkAdminUser, getUserById, checkCredentials,getUsers,deleteUserById,executeQuery,getConnectionStatus
 }
