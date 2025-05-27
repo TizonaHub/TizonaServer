@@ -9,6 +9,7 @@ client/public/wallpapers
 TizonaManager.exe
 node_modules
 dist
+distOld
 .env
 
 SSL/*
