@@ -1,0 +1,51 @@
+
+## Start Developing
+### 1. Clone project
+Clone the project
+
+```bash
+  git clone  https://github.com/TizonaHub/TizonaServer.git
+```
+
+Go to the project directory
+
+```bash
+  cd my-project
+```
+
+Install dependencies
+
+```bash
+  npm install
+```
+### 2. Prepare the Database
+Before running the server, you need to initialize the database.  
+Open your MySQL client and execute the following commands:
+```sql
+CREATE DATABASE tizonaserver;
+USE tizonaserver;
+SOURCE /your/installation/path/TizonaServer/SQL/setup.sql;
+```
+### 3. Prepare .env file
+Create a `.env` file in the root folder or modify `.env.example` and rename it to `.env` in the root folder and add the following configuration (adapt as needed):
+```ini
+PASSPHRASE=your_PASSPHRASE
+CRT=./SSL/your_crt.crt
+SSL_KEY=./SSL/your_key.key
+JWT_KEY='78-character-long-key'
+ORIGINS=["http://ORIGIN","http://ANOTHERORIGIN"]
+
+DB_HOST='localhost'
+DB_USER='your user'
+DB_USER_PASSWORD='your password'
+DB='your_database'
+STATIC='storage'
+NODE_ENV=production
+```
+
+### 4. Start the server
+
+```bash
+  node --watch tizonaServer.js
+```
+
