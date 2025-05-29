@@ -1,3 +1,32 @@
+# TizonaServer
+
+## 🤔 What is TizonaServer?
+
+TizonaServer is the backend engine behind [TizonaHub](https://github.com/TizonaHub), but it can also be used independently as a standalone server or API.  
+It handles file storage, user management, and all server-side operations, acting as the core of your private cloud.  
+Installed on a local machine or server, **TizonaServer ensures that all your data stays under your full control**, without relying on external services.
+
+TizonaServer follows the same installation and setup process as TizonaHub.  
+For a step-by-step guide, please refer to the [Getting Started](../../tizonahub/getting-started) section of the TizonaHub documentation.
+
+
+
+## ⚠️ Legal Notice
+
+TizonaHub is distributed for free and provided "as is" without any warranties.  
+Although it has been designed to be clear, functional, and secure, the use of the software is the **sole responsibility of the user**.  
+The developers assume **no responsibility for damages, data loss, or security issues** resulting from the use or misuse of the program.
+
+
+## 🛠️ Getting Started (Development)
+
+**Prerequisites**  
+Make sure you have the following installed on your system:
+
+- [Node.js](https://nodejs.org/)
+- [Python](https://www.python.org/)
+- [MySQL](https://www.mysql.com/)
+
 
 ## Start Developing
 ### 1. Clone project
