@@ -71,19 +71,6 @@ function handlePostFiles(req, cb) {
   else return null
 }
 
-
-function multerErrorHandler(err, req, res, next) {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-      return res.status(400).json({ error: 'Too many files uploaded' });
-    }
-    return res.status(400).json({ error: `Multer error: ${err.message}` });
-  }
-  err.code == 403 ? res.sendStatus(403) : null
-  next(err);
-}
-
-
 app.use(cors(corsOptions));
 app.use((req, res, next) => {
   const url = req.originalUrl
@@ -97,7 +84,8 @@ app.use((req, res, next) => {
     } catch (error) {
       //console.log('url: ', cF.getAbsPath(url));
       console.error('error at ' + cF.getAbsPath(url) + ' :' + error.message);
-      return res.sendStatus(404)
+      error.status = 404
+      return next(error)
     }
   }
   next();
@@ -163,7 +151,8 @@ app.patch('/api/resources/rename', upload.none(), (req, res) => { //changeresour
     res.send()
   } catch (error) {
     console.error('error at /api/changeSourceName: ', error.message)
-    res.sendStatus(500)
+    error.status = 500
+    return next(error)
   }
 })
 app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
@@ -185,7 +174,8 @@ app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
       access = cF.verifyPathAccess(decoded, resourceUrl)
     } catch (error) {
       console.error('error at /api/deleteResource: ', error.message);
-      return res.sendStatus(500)
+      error.status = 500
+      return next(error)
     }
   }
   try {
@@ -197,7 +187,8 @@ app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
     res.sendStatus(404) //403, 404 privacy
   } catch (error) {
     console.error('error at /api/deleteResource: ', error.message);
-    return res.sendStatus(500)
+    error.status = 500
+    return next(error)
   }
 })
 app.post('/api/resources/upload', upload.array('files[]'), (req, res) => { //postFiles
@@ -214,9 +205,10 @@ app.get('/api/resources/info', async (req, res) => { //getresourceinfo
     const mimeType = await cF.getMimeType(resourcePath);
     stats.mimeType = mimeType;
     res.status(200).send(stats);
-  } catch (err) {
-    console.error('Error en /api/resources/info:', err.message);
-    res.sendStatus(500);
+  } catch (error) {
+    console.error('Error en /api/resources/info:', error.message);
+    error.status = 500
+    return next(error)
   }
 })
 app.get('/api/resources/directories', async (req, res) => { //getDirectories
@@ -245,7 +237,8 @@ app.get('/api/resources/directories', async (req, res) => { //getDirectories
       })
     } catch (error) {
       console.error('error at /api/getDirectories: ', error.message);
-      return res.sendStatus(500)
+      error.status = 500
+      return next(error)
     }
   }
   res.send(directories)
@@ -274,7 +267,8 @@ app.post('/api/resources/directories', upload.none(), (req, res) => { //createdi
     res.send()
   } catch (error) {
     console.error('/api/createDirectory: ', error.message);
-    return res.status(500).send(error.message)
+    error.status = 500
+    return next(error)
   }
 })
 app.patch('/api/resources/move', upload.none(), async (req, res) => {
@@ -295,7 +289,8 @@ app.patch('/api/resources/move', upload.none(), async (req, res) => {
     return res.send();
   } catch (err) {
     console.error('Error en /api/resources/move:', err.message);
-    return res.sendStatus(500);
+    err.status = 500
+    return next(err);
   }
 });
 
@@ -317,7 +312,9 @@ app.put('/api/users', upload.single('file'), //updateUser
     try {
       decodedToken = jwt.verify(cF.getCookie('userToken', req.headers.cookie), jwtKey)
     } catch (error) {
-      return res.status(401).send({ errors: [{ type: 'token', msg: 'unable to decode token' }] })
+      error.message = 'unable to decode token'
+      error.status = 401
+      return next(error)
     }
     const propertiesArray = {
       username: req.body.username,
@@ -360,9 +357,9 @@ WHERE id = ?`;
       const result = await dbFuncs.executeQuery(query, params)
       if (result) return res.send()
     } catch (err) {
-      console.error('error at /api/updateUser: ', err.message);
+      err.status = 500
     }
-    return res.sendStatus(500)
+    next(err)
     function handleAvatarUpdate(property, file) {
       let params = []
       let query = `avatar=JSON_SET(avatar`
@@ -413,7 +410,7 @@ app.post('/api/users', upload.none(), //createUser
   body('username').notEmpty().withMessage('empty'),
   body('password').notEmpty().withMessage('empty').isLength({ min: 8, max: 25 }).withMessage('length')
   , async (req, res) => {
-  if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
+    if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send()
     const id = cF.getRandomString()
@@ -440,11 +437,14 @@ app.post('/api/users', upload.none(), //createUser
           //consider using secure:isHTTPS
         }).send({ user: user, userToken: token })
       } catch (error) {
-        res.status(500).send({ msg: 'Unable to create folder' })
+        error.message='Unable to create folder'
+        error.status=500
+        next(error)
       }
     } catch (error) {
       console.error(error, ' at /api/createUser');
-      return res.status(500).send({ code: error.code })
+        error.status=500
+        return next(error)
     }
   })
 /**
@@ -453,6 +453,14 @@ app.post('/api/users', upload.none(), //createUser
 app.get('/api/system/info', (req, res) => { //getServerInfo
   return res.send({ version: packageJson.version })
 
+})
+app.get('/api/errorTest', (req, res, next) => {
+  try {
+    throw new Error('error test');
+  } catch (error) {
+    error.code = 403
+    next(error)
+  }
 })
 app.get('/api/system/ping', (req, res) => { //testConnection
   res.send();
@@ -490,7 +498,8 @@ app.get('/api/auth/me', async (req, res) => { //verifyToken
     })
   } catch (error) {
     console.error(error.message, ' on /api/verifyToken');
-    res.sendStatus(400)
+    error.status=400
+    return next(error)
   }
 })
 app.get('/api/auth/logout', async (req, res) => { //removeToken
@@ -501,7 +510,8 @@ app.get('/api/auth/logout', async (req, res) => { //removeToken
     }
   } catch (error) {
     console.error(error.message, ' on /api/removeToken');
-    res.status(400).send({ code: null })
+    error.status=400
+    next(error)
   }
 })
 app.post('/api/auth/login', upload.none(), async (req, res) => { ///api/authenticateUser
@@ -534,4 +544,25 @@ app.post('/api/auth/login', upload.none(), async (req, res) => { ///api/authenti
 })
 
 //APP
-app.use(multerErrorHandler);
+app.use(errorHandler);
+
+function errorHandler(err, req, res, next) {
+  console.error(err);
+  res.status(err.status || 500).send({
+    message: err.message || 'Server error',
+  });
+}
+function errorHandler(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: 'Too many files uploaded' });
+    }
+    return res.status(400).json({ error: `Multer error: ${err.message}` });
+  }
+  //Global errors
+  res.status(err.status || 500).json({
+    message: err.message || 'Server error',
+  });
+}
+
+
