@@ -472,7 +472,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
   let script = execFile(platformCommand, [pythonScriptPath, __dirname])
 
-  script.on('error', (error) => {
+  script.on('error', (error) => { 
     console.error(error.message, ' at /api/getCharts');
     return res.sendStatus(500)
   });
@@ -545,13 +545,6 @@ app.post('/api/auth/login', upload.none(), async (req, res) => { ///api/authenti
 
 //APP
 app.use(errorHandler);
-
-function errorHandler(err, req, res, next) {
-  console.error(err);
-  res.status(err.status || 500).send({
-    message: err.message || 'Server error',
-  });
-}
 function errorHandler(err, req, res, next) {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -565,4 +558,4 @@ function errorHandler(err, req, res, next) {
   });
 }
 
-
+module.exports=app
