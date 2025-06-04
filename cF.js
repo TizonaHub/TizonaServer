@@ -48,7 +48,7 @@ async function readDirectory(dir, recursive, userObject) {
 function checkPathLength(path) {
   const limit = 260
   if (path.length > limit) {
-    console.err('Path is too long');
+    console.error('Path is too long');
     return false
   }
   return true
@@ -171,14 +171,14 @@ function getRandomString() {
   return string
 }
 function getCookie(cookieName, cookies) {
-  if (!cookieName || !cookies) return false
-  cookies = cookies.split(';')
-  let foundCookie = false
-  cookies.map((element) => {
-    element = element.split('=')
-    if (element[0] == cookieName) foundCookie = element
+  if (!cookieName || !cookies) return null;
+  const cookieArray = cookies.split(';');
+  let foundCookie = null;
+  cookieArray.forEach((element) => {
+    const parts = element.split('=');
+    if (parts[0] === cookieName) foundCookie = parts;
   });
-  return foundCookie[1]
+  return foundCookie ? foundCookie[1] : null;
 }
 function validateJson(param) {
   try {
