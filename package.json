@@ -1,0 +1,30 @@
+{
+  "name": "tizonaserver",
+  "version": "0.3.0",
+  "main": "tizonaServer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Pablo Martín Morente (Kanse)",
+  "license": "MIT",
+  "description": "Server application",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "checker": "^0.5.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "express-validator": "^7.2.0",
+    "fs-extra": "^11.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "license-checker": "^25.0.1",
+    "mime": "^4.0.4",
+    "multer": "^2.0.0",
+    "mysql2": "^3.11.3",
+    "npm": "^11.1.0"
+  },
+  "engines": {
+  "node": ">=20.17.0 <23.0.0"
+}
+
+}
