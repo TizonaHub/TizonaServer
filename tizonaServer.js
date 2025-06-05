@@ -156,7 +156,7 @@ app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
   }
   try {
     if (access) {
-      deleted = cF.deleteDirectory(resourceUrl)
+      const deleted = cF.deleteDirectory(resourceUrl)
       if (!deleted) throw new Error('Unable to delete resource')
       return res.send()
     }
@@ -219,7 +219,7 @@ app.get('/api/resources/directories', async (req, res) => { //getDirectories
   }
   res.send(directories)
 })
-app.post('/api/resources/directories', upload.none(), (req, res) => { //createdirectory
+app.post('/api/resources/directories', upload.none(), async (req, res) => { //createdirectory
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let uri = params.path || params.path;
   if (!uri) {
@@ -239,7 +239,7 @@ app.post('/api/resources/directories', upload.none(), (req, res) => { //createdi
   try {
     const access = cF.verifyPathAccess(decoded, uri);
     if (!access) return res.sendStatus(404) //403
-    fs.mkdir(uri)
+    await fs.mkdir(uri)
     res.send()
   } catch (error) {
     console.error('/api/createDirectory: ', error.message);
@@ -529,7 +529,7 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: `Multer error: ${err.message}` });
   }
   //Global errors
-  console.log(err.message, ' -- '+err.status);
+  console.log(err.message, ' -- Code: '+err.status);
   res.status(err.status || 500).json({
     message: err.message || 'Server error',
   });

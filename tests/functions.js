@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 async function readEnv() {
     try {
-        json = {}
+        let json = {}
         const content = await fs.readFile('.env', 'utf8');
         content.split('\n').forEach(line => {
             line = line.trim();
