@@ -4,7 +4,7 @@ let dbFunctions
 const request = require('supertest');
 beforeAll(async () => {
     await setProcessEnv()
-    app = require('../../tizonaserver')
+    app = require('../../tizonaServer')
     dbFunctions = require('../../dbFunctions')
 });
 describe('/api/system endpoints testing', () => {
