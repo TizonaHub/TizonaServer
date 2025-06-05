@@ -10,8 +10,6 @@ const { execFile, spawn } = require('child_process');
 const bcrypt = require('bcrypt');
 const { body, validationResult, param, cookie } = require('express-validator');
 const packageJson = require('./package.json')
-let https = require('https')
-let http = require('http')
 let dbFuncs = require('./dbFunctions')
 const os = require('os');
 process.loadEnvFile()
@@ -97,29 +95,7 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 
 
-/**
- * SERVER CREATION
- */
-try {
-  const params = {
-    cert: fs.readFileSync(process.env.CRT),
-    key: fs.readFileSync(process.env.SSL_KEY),
-    passphrase: process.env.PASSPHRASE
-  }
-  const testHTTPS = process.env.TEST_HTTPS
-  const mode = process.env.NODE_ENV
-  const condition1 = mode == 'development' && testHTTPS != 'true'
-  const condition2 = mode != 'production'
-  if (condition1 && condition2) throw new Error('Development mode, creating http server...')
-  https.createServer(params, app).listen(443, () => {
-    console.log(`HTTPS Server is running`);
-  });
-} catch (error) { //IF HTTPS FAILED, THEN HTTP SERVER IS CREATED
-  console.log('Unable to create HTTPS server, creating HTTP server...');
-  http.createServer(app).listen(80, () => {
-    console.log('HTTP server is running');
-  });
-}
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
@@ -454,11 +430,11 @@ app.get('/api/system/info', (req, res) => { //getServerInfo
   return res.send({ version: packageJson.version })
 
 })
-app.get('/api/errorTest', (req, res, next) => {
+app.get('/api/system/errorTest', (req, res, next) => {
   try {
     throw new Error('error test');
   } catch (error) {
-    error.code = 403
+    error.status = 403
     next(error)
   }
 })
@@ -553,6 +529,7 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: `Multer error: ${err.message}` });
   }
   //Global errors
+  console.log(err.message, ' -- '+err.status);
   res.status(err.status || 500).json({
     message: err.message || 'Server error',
   });

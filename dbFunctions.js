@@ -4,7 +4,8 @@ const connection = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_USER_PASSWORD,
-  database: process.env.DB
+  database: process.env.DB,
+  charset: 'utf8mb4'
 });
 
 connection.connect((err) => {
@@ -122,4 +123,5 @@ async function executeQuery(query, params) {
 
 module.exports = {
     checkAdminUser, getUserById, checkCredentials,getUsers,deleteUserById,executeQuery,getConnectionStatus
+    ,connection
 }

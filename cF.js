@@ -4,7 +4,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 process.loadEnvFile()
 const jwtKey = process.env.JWT_KEY
-const base = path.join(__dirname, process.env.STATIC)//path.join(path.join(__dirname, process.env.STATIC),'directories')
+const base = path.join(__dirname, process.env.STATIC)
 
 async function readDirectory(dir, recursive, userObject) {
   if (!verifyPathAccess(userObject, dir)) return false
