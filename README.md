@@ -75,6 +75,6 @@ NODE_ENV=production
 ### 4. Start the server
 
 ```bash
-  node --watch tizonaServer.js
+  node --watch start.js
 ```
 
