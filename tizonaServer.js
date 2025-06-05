@@ -405,7 +405,7 @@ app.post('/api/users', upload.none(), //createUser
       const token = jwt.sign(user, jwtKey, { expiresIn: '365d' });
       try {
         const uri = process.env.STATIC + '/directories/' + id
-        fs.mkdir(uri)
+        await fs.mkdir(uri)
         return res.cookie('userToken', token, {
           httpOnly: true,
           sameSite: 'strict',
