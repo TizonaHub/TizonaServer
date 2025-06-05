@@ -1,7 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const app = require('./tizonaserver');
+const app = require('./tizonaServer');
 
 try {
   const params = {
