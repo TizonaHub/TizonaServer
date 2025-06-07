@@ -108,7 +108,7 @@ app.get('/', (req, res) => {
  * RESOURCES
  */
 
-app.patch('/api/resources/rename', upload.none(), (req, res) => { //changeresourcename
+app.patch('/api/resources/rename', upload.none(), (req, res,next) => { //changeresourcename
   try {
     const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
     if (!params.source || !params.newName) {
@@ -131,7 +131,7 @@ app.patch('/api/resources/rename', upload.none(), (req, res) => { //changeresour
     return next(error)
   }
 })
-app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
+app.delete('/api/resources', upload.none(), (req, res,next) => { //deleteresource
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let resourceUrl = params.resourceUrl || params.resourceUrl;
   if (!resourceUrl) {
@@ -167,7 +167,7 @@ app.delete('/api/resources', upload.none(), (req, res) => { //deleteresource
     return next(error)
   }
 })
-app.post('/api/resources/upload', upload.array('files[]'), (req, res) => { //postFiles
+app.post('/api/resources/upload', upload.array('files[]'), (req, res,next) => { //postFiles
   res.send()
 })
 app.get('/api/resources/info', async (req, res) => { //getresourceinfo
@@ -187,7 +187,7 @@ app.get('/api/resources/info', async (req, res) => { //getresourceinfo
     return next(error)
   }
 })
-app.get('/api/resources/directories', async (req, res) => { //getDirectories
+app.get('/api/resources/directories', async (req, res,next) => { //getDirectories
   const queryParams = req.query
   let directory = queryParams['directory'] ?? path.join('directories', 'publicDirectories');
   directory = cF.getAbsPath(directory)
@@ -219,7 +219,7 @@ app.get('/api/resources/directories', async (req, res) => { //getDirectories
   }
   res.send(directories)
 })
-app.post('/api/resources/directories', upload.none(), async (req, res) => { //createdirectory
+app.post('/api/resources/directories', upload.none(), async (req, res,next) => { //createdirectory
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let uri = params.path || params.path;
   if (!uri) {
@@ -247,7 +247,7 @@ app.post('/api/resources/directories', upload.none(), async (req, res) => { //cr
     return next(error)
   }
 })
-app.patch('/api/resources/move', upload.none(), async (req, res) => {
+app.patch('/api/resources/move', upload.none(), async (req, res,next) => {
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   if (!params || !params['newLocation'] || !params['source']) {
     return res.sendStatus(400);
@@ -280,7 +280,7 @@ app.put('/api/users', upload.single('file'), //updateUser
     .custom(cF.validateJson).withMessage('invalid json'),
   body('password').if((value, { req }) => req.body.password !== undefined)
     .isLength({ min: 8, max: 25 }).withMessage('length'),
-  async (req, res) => {
+  async (req, res,next) => {
     if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send(errors)
@@ -385,7 +385,7 @@ app.post('/api/users', upload.none(), //createUser
   body('name').notEmpty().withMessage('empty'),
   body('username').notEmpty().withMessage('empty'),
   body('password').notEmpty().withMessage('empty').isLength({ min: 8, max: 25 }).withMessage('length')
-  , async (req, res) => {
+  , async (req, res,next) => {
     if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send()
@@ -460,7 +460,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
 /**
  *  AUTH
  */
-app.get('/api/auth/me', async (req, res) => { //verifyToken
+app.get('/api/auth/me', async (req, res,next) => { //verifyToken
   if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
   if (!req.headers.cookie) return res.sendStatus(400);
   try {
@@ -478,7 +478,7 @@ app.get('/api/auth/me', async (req, res) => { //verifyToken
     return next(error)
   }
 })
-app.get('/api/auth/logout', async (req, res) => { //removeToken
+app.get('/api/auth/logout', async (req, res,next) => { //removeToken
   try {
     let cookie = cF.getCookie('userToken', req.headers.cookie)
     if (cookie) {
