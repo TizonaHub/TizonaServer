@@ -117,10 +117,7 @@ app.patch('/api/resources/rename', upload.none(), (req, res,next) => { //changer
     let source = cF.getAbsPath(params.source)
     const token = cF.getDecodedToken(req)
     let newName = path.basename(params.newName);
-    let newSource = source.split(path.sep)
-    newSource[newSource.length - 1] = newName
-    newSource = path.join(...newSource)
-    console.log('newSource: ', cF.verifyPathAccess(token, source));
+    let newSource = path.join(source.slice(0,source.lastIndexOf(path.sep)),newName)
     if (!cF.verifyPathAccess(token, source)) return res.sendStatus(404) //403, 404 privacy
     if (!cF.verifyPathAccess(token, newSource)) return res.sendStatus(404) //403, 404 privacy
     fs.renameSync(source, newSource)
