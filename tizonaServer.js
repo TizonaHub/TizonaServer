@@ -443,7 +443,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
   let platformCommand = 'python'
   if (platform != 'win32') platformCommand = 'python3'
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
-  let script = execFile(platformCommand, [pythonScriptPath, __dirname])
+  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname,'..')])
 
   script.on('error', (error) => { 
     console.error(error.message, ' at /api/getCharts');

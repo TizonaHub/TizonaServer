@@ -16,14 +16,14 @@ async function readDirectory(dir, recursive, userObject) {
       const stats = fs.statSync(resourcePath);
       const resourceRelPath = resourcePath.split(process.env.STATIC)[1].replaceAll(path.sep, '/')
       if (stats.isDirectory()) {
+        const childrenData = recursive ? await readDirectory(resourcePath + '/', true, userObject) : null
         let data = {
           type: 'directory',
           name: resource,
-          children: null,
+          children: childrenData,
           uri: resourceRelPath,
-          size: stats.blksize
+          size: getDirSize(childrenData)
         }
-        if (recursive) data.children = await readDirectory(resourcePath + '/', true, userObject);
         result.push(data);
       } else {
         let mimeType = await getMimeType(resource)
@@ -33,7 +33,7 @@ async function readDirectory(dir, recursive, userObject) {
             name: resource,
             uri: resourceRelPath,
             mimeType: mimeType,
-            size: stats.blksize
+            size: stats.size
           });
 
         }
@@ -43,6 +43,20 @@ async function readDirectory(dir, recursive, userObject) {
   } catch (error) {
     console.error('error at cF.readDirectory: ', error.message);
     return null
+  }
+
+  function getDirSize(dirData) {
+    const sizes = dirData.map(data => data.size)
+    let total = 0
+    sizes.forEach((element, index) => {
+      console.log(dirData[index].name);
+      if (!element) {
+        sizes[index] = getDirSize(dirData[index].children)
+      }
+      total = total + sizes[index]
+    });
+    console.log(total);
+    return total
   }
 }
 function checkPathLength(path) {
@@ -100,9 +114,9 @@ function getDecodedToken(req) {
  * @returns if epmty, true, if not, false
  */
 function JSONisNotEmpty(json) {
-  if(typeof json != 'object') return false
-  const values=Object.values(json)
-  if(values.length>0)return json
+  if (typeof json != 'object') return false
+  const values = Object.values(json)
+  if (values.length > 0) return json
   return false
 }
 function checkSeparator(param) {
