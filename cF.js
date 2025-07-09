@@ -46,16 +46,13 @@ async function readDirectory(dir, recursive, userObject) {
   }
 
   function getDirSize(dirData) {
+    if(!dirData) return 0
     const sizes = dirData.map(data => data.size)
     let total = 0
-    sizes.forEach((element, index) => {
-      console.log(dirData[index].name);
-      if (!element) {
-        sizes[index] = getDirSize(dirData[index].children)
-      }
-      total = total + sizes[index]
+    sizes.forEach((element) => {
+      if (!element) element = getDirSize(element.children)
+      total = total + element
     });
-    console.log(total);
     return total
   }
 }
