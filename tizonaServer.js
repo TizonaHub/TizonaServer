@@ -108,7 +108,7 @@ app.get('/', (req, res) => {
  * RESOURCES
  */
 
-app.patch('/api/resources/rename', upload.none(), (req, res,next) => { //changeresourcename
+app.patch('/api/resources/rename', upload.none(), (req, res, next) => { //changeresourcename
   try {
     const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
     if (!params.source || !params.newName) {
@@ -117,7 +117,7 @@ app.patch('/api/resources/rename', upload.none(), (req, res,next) => { //changer
     let source = cF.getAbsPath(params.source)
     const token = cF.getDecodedToken(req)
     let newName = path.basename(params.newName);
-    let newSource = path.join(source.slice(0,source.lastIndexOf(path.sep)),newName)
+    let newSource = path.join(source.slice(0, source.lastIndexOf(path.sep)), newName)
     if (!cF.verifyPathAccess(token, source)) return res.sendStatus(404) //403, 404 privacy
     if (!cF.verifyPathAccess(token, newSource)) return res.sendStatus(404) //403, 404 privacy
     fs.renameSync(source, newSource)
@@ -128,7 +128,7 @@ app.patch('/api/resources/rename', upload.none(), (req, res,next) => { //changer
     return next(error)
   }
 })
-app.delete('/api/resources', upload.none(), (req, res,next) => { //deleteresource
+app.delete('/api/resources', upload.none(), (req, res, next) => { //deleteresource
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let resourceUrl = params.resourceUrl || params.resourceUrl;
   if (!resourceUrl) {
@@ -164,7 +164,7 @@ app.delete('/api/resources', upload.none(), (req, res,next) => { //deleteresourc
     return next(error)
   }
 })
-app.post('/api/resources/upload', upload.array('files[]'), (req, res,next) => { //postFiles
+app.post('/api/resources/upload', upload.array('files[]'), (req, res, next) => { //postFiles
   res.send()
 })
 app.get('/api/resources/info', async (req, res) => { //getresourceinfo
@@ -184,7 +184,7 @@ app.get('/api/resources/info', async (req, res) => { //getresourceinfo
     return next(error)
   }
 })
-app.get('/api/resources/directories', async (req, res,next) => { //getDirectories
+app.get('/api/resources/directories', async (req, res, next) => { //getDirectories
   const queryParams = req.query
   let directory = queryParams['directory'] ?? path.join('directories', 'publicDirectories');
   directory = cF.getAbsPath(directory)
@@ -209,14 +209,15 @@ app.get('/api/resources/directories', async (req, res,next) => { //getDirectorie
         personal: true,
       })
     } catch (error) {
-      console.error('error at /api/getDirectories: ', error.message);
+      console.error('error at /api/resources/directories: ', error.message);
       error.status = 500
+       if (directories)return res.send(directories)
       return next(error)
     }
   }
   res.send(directories)
 })
-app.post('/api/resources/directories', upload.none(), async (req, res,next) => { //createdirectory
+app.post('/api/resources/directories', upload.none(), async (req, res, next) => { //createdirectory
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let uri = params.path || params.path;
   if (!uri) {
@@ -244,7 +245,7 @@ app.post('/api/resources/directories', upload.none(), async (req, res,next) => {
     return next(error)
   }
 })
-app.patch('/api/resources/move', upload.none(), async (req, res,next) => {
+app.patch('/api/resources/move', upload.none(), async (req, res, next) => {
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   if (!params || !params['newLocation'] || !params['source']) {
     return res.sendStatus(400);
@@ -277,7 +278,7 @@ app.put('/api/users', upload.single('file'), //updateUser
     .custom(cF.validateJson).withMessage('invalid json'),
   body('password').if((value, { req }) => req.body.password !== undefined)
     .isLength({ min: 8, max: 25 }).withMessage('length'),
-  async (req, res,next) => {
+  async (req, res, next) => {
     if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send(errors)
@@ -382,7 +383,7 @@ app.post('/api/users', upload.none(), //createUser
   body('name').notEmpty().withMessage('empty'),
   body('username').notEmpty().withMessage('empty'),
   body('password').notEmpty().withMessage('empty').isLength({ min: 8, max: 25 }).withMessage('length')
-  , async (req, res,next) => {
+  , async (req, res, next) => {
     if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
     let errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).send()
@@ -410,14 +411,14 @@ app.post('/api/users', upload.none(), //createUser
           //consider using secure:isHTTPS
         }).send({ user: user, userToken: token })
       } catch (error) {
-        error.message='Unable to create folder'
-        error.status=500
+        error.message = 'Unable to create folder'
+        error.status = 500
         next(error)
       }
     } catch (error) {
       console.error(error, ' at /api/createUser');
-        error.status=500
-        return next(error)
+      error.status = 500
+      return next(error)
     }
   })
 /**
@@ -443,9 +444,9 @@ app.get('/api/system/charts', (req, res) => { //getCharts
   let platformCommand = 'python'
   if (platform != 'win32') platformCommand = 'python3'
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
-  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname,'..')])
+  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname, '..')])
 
-  script.on('error', (error) => { 
+  script.on('error', (error) => {
     console.error(error.message, ' at /api/getCharts');
     return res.sendStatus(500)
   });
@@ -457,7 +458,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
 /**
  *  AUTH
  */
-app.get('/api/auth/me', async (req, res,next) => { //verifyToken
+app.get('/api/auth/me', async (req, res, next) => { //verifyToken
   if (!dbFuncs.getConnectionStatus()) return res.sendStatus(500)
   if (!req.headers.cookie) return res.sendStatus(400);
   try {
@@ -471,11 +472,11 @@ app.get('/api/auth/me', async (req, res,next) => { //verifyToken
     })
   } catch (error) {
     console.error(error.message, ' on /api/verifyToken');
-    error.status=400
+    error.status = 400
     return next(error)
   }
 })
-app.get('/api/auth/logout', async (req, res,next) => { //removeToken
+app.get('/api/auth/logout', async (req, res, next) => { //removeToken
   try {
     let cookie = cF.getCookie('userToken', req.headers.cookie)
     if (cookie) {
@@ -483,7 +484,7 @@ app.get('/api/auth/logout', async (req, res,next) => { //removeToken
     }
   } catch (error) {
     console.error(error.message, ' on /api/removeToken');
-    error.status=400
+    error.status = 400
     next(error)
   }
 })
@@ -526,10 +527,10 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: `Multer error: ${err.message}` });
   }
   //Global errors
-  console.log(err.message, ' -- Code: '+err.status);
+  console.log(err.message, ' -- Code: ' + err.status);
   res.status(err.status || 500).json({
     message: err.message || 'Server error',
   });
 }
 
-module.exports=app
+module.exports = app
