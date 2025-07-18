@@ -20,7 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "license-checker": "^25.0.1",
     "mime": "^4.0.4",
-    "multer": "^2.0.0",
+    "multer": "^2.0.2",
     "mysql2": "^3.11.3",
     "npm": "^11.1.0",
     "supertest": "^7.1.1"
