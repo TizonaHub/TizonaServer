@@ -1,7 +1,6 @@
 {
   "name": "tizonaserver",
   "version": "0.3.0",
-  "main": "tizonaServer.js",
   "scripts": {
     "test": "jest",
     "start": "node start.js"
