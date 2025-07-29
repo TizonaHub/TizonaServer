@@ -211,7 +211,7 @@ app.get('/api/resources/directories', async (req, res, next) => { //getDirectori
     } catch (error) {
       console.error('error at /api/resources/directories: ', error.message);
       error.status = 500
-       if (directories)return res.send(directories)
+      if (directories) return res.send(directories)
       return next(error)
     }
   }
@@ -528,6 +528,11 @@ function errorHandler(err, req, res, next) {
   }
   //Global errors
   console.log(err.message, ' -- Code: ' + err.status);
+  if (err.message = 'invalid signature') {
+    res.clearCookie('userToken').status(401).json({
+      message: err.message || 'Server error',
+    })
+  }
   res.status(err.status || 500).json({
     message: err.message || 'Server error',
   });
