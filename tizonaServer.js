@@ -409,7 +409,7 @@ app.post('/api/users', upload.none(), //createUser
           sameSite: 'strict',
           maxAge: 31536000000 //1 year 
           //consider using secure:isHTTPS
-        }).send({ user: user, userToken: token })
+        }).send({ userData: user, userToken: token })
       } catch (error) {
         error.message = 'Unable to create folder'
         error.status = 500
