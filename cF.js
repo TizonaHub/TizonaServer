@@ -46,7 +46,7 @@ async function readDirectory(dir, recursive, userObject) {
   }
 
   function getDirSize(dirData) {
-    if(!dirData) return 0
+    if (!dirData) return 0
     const sizes = dirData.map(data => data.size)
     let total = 0
     sizes.forEach((element) => {
@@ -186,10 +186,19 @@ function getCookie(cookieName, cookies) {
   const cookieArray = cookies.split(';');
   let foundCookie = null;
   cookieArray.forEach((element) => {
-    const parts = element.split('=');
+    const parts = splitArray(element)
+    parts[0] = parts[0].trim()
+    parts[1] = parts[1].trim()
     if (parts[0] === cookieName) foundCookie = parts;
   });
   return foundCookie ? foundCookie[1] : null;
+
+  function splitArray(array) {
+    const eq = array.indexOf("=");
+    const name = array.slice(0, eq).trim();
+    const value = array.slice(eq + 1).trim();
+    return [name,value]
+  }
 }
 function validateJson(param) {
   try {

@@ -195,6 +195,7 @@ app.get('/api/resources/directories', async (req, res, next) => { //getDirectori
   if (privateDir && req.headers.cookie) {
     try {
       const token = cF.getCookie('userToken', req.headers.cookie)
+      if (!token) return res.send(directories)
       const decoded = jwt.verify(token, jwtKey)
       const userExists = await dbFuncs.getUserById(decoded.id)
       const path = cF.getAbsPath(`/directories/${decoded.id}`)//process.env.STATIC + `/directories/${decoded.id}/`0
@@ -463,6 +464,7 @@ app.get('/api/auth/me', async (req, res, next) => { //verifyToken
   if (!req.headers.cookie) return res.sendStatus(400);
   try {
     let cookie = cF.getCookie('userToken', req.headers.cookie)
+    if (!cookie) return res.sendStatus(400)
     let decodedToken = jwt.verify(cookie, jwtKey)
     let user = await dbFuncs.getUserById(decodedToken.id)
     if (user == undefined) return res.sendStatus(400)
@@ -471,7 +473,7 @@ app.get('/api/auth/me', async (req, res, next) => { //verifyToken
       role: user.role, avatar: user.avatar
     })
   } catch (error) {
-    console.error(error.message, ' on /api/verifyToken');
+    console.error(error.message, ' on /api/auth/me');
     error.status = 400
     return next(error)
   }
@@ -503,6 +505,7 @@ app.post('/api/auth/login', upload.none(), async (req, res) => { ///api/authenti
     }, jwtKey, { expiresIn: '365d' });
     res.cookie('userToken', token, {
       httpOnly: true,
+      sameSite:'strict',
       maxAge: 31536000000 //1 year 
     }).send({
       userToken: token, userData: {
@@ -527,7 +530,7 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: `Multer error: ${err.message}` });
   }
   //Global errors
-  console.log(err.message, ' -- Code: ' + err.status);
+  console.error(err.message, ' -- Code: ' + err.status);
   if (err.message = 'invalid signature') {
     res.clearCookie('userToken').status(401).json({
       message: err.message || 'Server error',
