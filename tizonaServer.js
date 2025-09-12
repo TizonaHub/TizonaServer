@@ -244,55 +244,52 @@ app.post('/api/resources/directories', upload.none(), async (req, res, next) => 
 })
 app.patch('/api/resources/move', upload.none(), async (req, res, next) => {
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
-  if (!params || !params['newLocation'] || !params['source']) {
-    return res.sendStatus(400);
-  }
-  paramsArray = cF.paramsToArray(resourceUrl, true)
+  let instructions = cF.paramsToArray(params['instructions'])
+  const newLocationParams = cF.paramsToArray(params['newLocation'], true)
+  const sourceParams = cF.paramsToArray(params['source'], true)
   const cookies = req.headers.cookie
   const token = cF.getCookie('userToken', cookies)
-  console.log(paramsArray);
- /* paramsArray.forEach((resource) => {
-    0
-    if (!fs.existsSync(resource)) throw new Error('resource does not exist')
-    let access = false
-    if (!token) {
-      access = cF.verifyPathAccess(null, resource)
-    }
-    else {
-      const decoded = cF.verifyToken(token, jwtKey)
-      access = cF.verifyPathAccess(decoded, resource)
-    }
-    if (access) {
-      try {
-        const deleted = cF.deleteDirectory(resource)
-        if (!deleted) throw new Error('Unable to delete resource')
-      } catch (error) {
-        error.status = 500
-        return next(error)
+  if (sourceParams.length != newLocationParams.length && !instructions) {
+    const error = new Error('source and newLocation have different numbers of parameters');
+    error.status = 400;
+    return next(error)
+  }
+  if (!instructions) instructions = [{ from: params['source'], to: params['newLocation'] }]
+  for (const instruction of instructions) {
+    try {
+      const from = cF.getAbsPath(instruction.from);
+      const to = cF.getAbsPath(instruction.to);
+      let error = null;
+      if (!fs.existsSync(from)) error = new Error(`resource ${from} does not exist`);
+      if (error) {
+        error.status = 400;
+        throw error
       }
+      let accessSource = false;
+      let accessNewLocation = false;
+
+      if (!token) {
+
+        accessSource = cF.verifyPathAccess(null, from);
+        accessNewLocation = cF.verifyPathAccess(null, to);
+      } else {
+        const decoded = cF.verifyToken(token, jwtKey);
+        accessSource = cF.verifyPathAccess(decoded, from);
+        accessNewLocation = cF.verifyPathAccess(decoded, to);
+      }
+
+      if (!accessSource || !accessNewLocation) {
+        error = new Error(`Could not move resource because you do not have access to it`);
+        error.status = 403;
+        return next(error);
+      }
+      await cF.changeResourceLocation(to, from);
+
+    } catch (error) {
+      return next(error)
     }
+  }
     return res.send()
-  })*/
-  /* const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
-   if (!params || !params['newLocation'] || !params['source']) {
-     return res.sendStatus(400);
-   }
-   const token = cF.getDecodedToken(req);
-   const newLocation = cF.getAbsPath(params['newLocation']);
-   const source = cF.getAbsPath(params['source']);
-   const hasAccess = cF.verifyPathAccess(token, newLocation) && cF.verifyPathAccess(token, source);
-   if (!hasAccess) return res.sendStatus(404)
-   try {
-     const success = await cF.changeResourceLocation(newLocation, source);
-     if (!success) {
-       return res.status(500).send({ message: 'Failed to move the resource.' });
-     }
-     return res.send();
-   } catch (err) {
-     console.error('Error en /api/resources/move:', err.message);
-     err.status = 500
-     return next(err);
-   }*/
 });
 
 /**

@@ -80,8 +80,9 @@ async function changeResourceLocation(newLocation, source) {
     await fs.move(source, newLocation);
     return true;
   } catch (err) {
-    console.error('Error at cF.changeResourceLocation: ', err.message);
-    return false;
+    err.message='Error at changeResourceLocation(): '+err.message
+    err.status=500
+    throw err
   }
 }
 //seems deprecated
