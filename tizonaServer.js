@@ -134,35 +134,31 @@ app.delete('/api/resources', upload.none(), (req, res, next) => { //deleteresour
   if (!resourceUrl) {
     return res.status(400).json({ error: 'Missing required parameter: resourceUrl' });
   }
-  resourceUrl = cF.getAbsPath(resourceUrl)
+  paramsArray = cF.paramsToArray(resourceUrl, true)
   const cookies = req.headers.cookie
-  let access = false
   const token = cF.getCookie('userToken', cookies)
-  if (!token) {
-    access = cF.verifyPathAccess(null, resourceUrl)
-  }
-  else {
-    try {
-      const decoded = jwt.verify(token, jwtKey)
-      access = cF.verifyPathAccess(decoded, resourceUrl)
-    } catch (error) {
-      console.error('error at /api/deleteResource: ', error.message);
-      error.status = 500
-      return next(error)
+  paramsArray.forEach((resource) => {
+    0
+    if (!fs.existsSync(resource)) throw new Error('resource does not exist')
+    let access = false
+    if (!token) {
+      access = cF.verifyPathAccess(null, resource)
     }
-  }
-  try {
+    else {
+      const decoded = cF.verifyToken(token, jwtKey)
+      access = cF.verifyPathAccess(decoded, resource)
+    }
     if (access) {
-      const deleted = cF.deleteDirectory(resourceUrl)
-      if (!deleted) throw new Error('Unable to delete resource')
-      return res.send()
+      try {
+        const deleted = cF.deleteDirectory(resource)
+        if (!deleted) throw new Error('Unable to delete resource')
+      } catch (error) {
+        error.status = 500
+        return next(error)
+      }
     }
-    res.sendStatus(404) //403, 404 privacy
-  } catch (error) {
-    console.error('error at /api/deleteResource: ', error.message);
-    error.status = 500
-    return next(error)
-  }
+    return res.send()
+  })
 })
 app.post('/api/resources/upload', upload.array('files[]'), (req, res, next) => { //postFiles
   res.send()
@@ -251,22 +247,52 @@ app.patch('/api/resources/move', upload.none(), async (req, res, next) => {
   if (!params || !params['newLocation'] || !params['source']) {
     return res.sendStatus(400);
   }
-  const token = cF.getDecodedToken(req);
-  const newLocation = cF.getAbsPath(params['newLocation']);
-  const source = cF.getAbsPath(params['source']);
-  const hasAccess = cF.verifyPathAccess(token, newLocation) && cF.verifyPathAccess(token, source);
-  if (!hasAccess) return res.sendStatus(404)
-  try {
-    const success = await cF.changeResourceLocation(newLocation, source);
-    if (!success) {
-      return res.status(500).send({ message: 'Failed to move the resource.' });
+  paramsArray = cF.paramsToArray(resourceUrl, true)
+  const cookies = req.headers.cookie
+  const token = cF.getCookie('userToken', cookies)
+  console.log(paramsArray);
+ /* paramsArray.forEach((resource) => {
+    0
+    if (!fs.existsSync(resource)) throw new Error('resource does not exist')
+    let access = false
+    if (!token) {
+      access = cF.verifyPathAccess(null, resource)
     }
-    return res.send();
-  } catch (err) {
-    console.error('Error en /api/resources/move:', err.message);
-    err.status = 500
-    return next(err);
-  }
+    else {
+      const decoded = cF.verifyToken(token, jwtKey)
+      access = cF.verifyPathAccess(decoded, resource)
+    }
+    if (access) {
+      try {
+        const deleted = cF.deleteDirectory(resource)
+        if (!deleted) throw new Error('Unable to delete resource')
+      } catch (error) {
+        error.status = 500
+        return next(error)
+      }
+    }
+    return res.send()
+  })*/
+  /* const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
+   if (!params || !params['newLocation'] || !params['source']) {
+     return res.sendStatus(400);
+   }
+   const token = cF.getDecodedToken(req);
+   const newLocation = cF.getAbsPath(params['newLocation']);
+   const source = cF.getAbsPath(params['source']);
+   const hasAccess = cF.verifyPathAccess(token, newLocation) && cF.verifyPathAccess(token, source);
+   if (!hasAccess) return res.sendStatus(404)
+   try {
+     const success = await cF.changeResourceLocation(newLocation, source);
+     if (!success) {
+       return res.status(500).send({ message: 'Failed to move the resource.' });
+     }
+     return res.send();
+   } catch (err) {
+     console.error('Error en /api/resources/move:', err.message);
+     err.status = 500
+     return next(err);
+   }*/
 });
 
 /**
@@ -505,7 +531,7 @@ app.post('/api/auth/login', upload.none(), async (req, res) => { ///api/authenti
     }, jwtKey, { expiresIn: '365d' });
     res.cookie('userToken', token, {
       httpOnly: true,
-      sameSite:'strict',
+      sameSite: 'strict',
       maxAge: 31536000000 //1 year 
     }).send({
       userToken: token, userData: {
@@ -531,12 +557,12 @@ function errorHandler(err, req, res, next) {
   }
   //Global errors
   console.error(err.message, ' -- Code: ' + err.status);
-  if (err.message = 'invalid signature') {
-    res.clearCookie('userToken').status(401).json({
+  if (err.message == 'invalid signature') {
+    return res.clearCookie('userToken').status(401).json({
       message: err.message || 'Server error',
     })
   }
-  res.status(err.status || 500).json({
+  return res.status(err.status || 500).json({
     message: err.message || 'Server error',
   });
 }

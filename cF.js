@@ -65,19 +65,15 @@ function checkPathLength(path) {
   return true
 }
 /**
- * Deletes directories and subdirectories
+ * Deletes resources, directories and subdirectories
  * @param {*} dir 
  */
 function deleteDirectory(dir) {
   if (fs.existsSync(dir)) {
-    if (fs.statSync(dir)) {
-      fs.rmSync(dir, { recursive: true })
-      return true
-    }
-    else fs.unlinkSync(dir)
-    return false
+    fs.rmSync(dir, { recursive: true })
+    return true
   }
-  else return false
+  else throw new Error('Resource does not exist')
 }
 async function changeResourceLocation(newLocation, source) {
   try {
@@ -127,15 +123,16 @@ function checkSeparator(param) {
  * @param {*} pathParam absolute path
  * @returns 
  */
-function verifyPathAccess(user, pathParam) {
-  pathParam = pathParam.split(base)
-  if (pathParam.length < 2) return false
-  pathParam = pathParam[1].split(path.sep).slice(1)
-  const condition1 = !!(user && user.id && user.id == pathParam[1])
-  const condition2 = pathParam[1] == 'publicDirectories'
-  if (condition2) return true
-  if (condition1) return true
-  return false
+
+function verifyToken(token, jwtKey) {
+  if (!token || !jwtKey) return false
+  try {
+    return jwt.verify(token, jwtKey)
+  } catch (error) {
+    console.error('error at /api/deleteResource: ', error.message);
+    error.status = 500
+    return next(error)
+  }
 }
 /**
  * 
@@ -197,7 +194,7 @@ function getCookie(cookieName, cookies) {
     const eq = array.indexOf("=");
     const name = array.slice(0, eq).trim();
     const value = array.slice(eq + 1).trim();
-    return [name,value]
+    return [name, value]
   }
 }
 function validateJson(param) {
@@ -223,10 +220,51 @@ function validateUpdate(userToBeUpdated, userUpdating) {
   if (condition1 || condition2 || condition3) return true
   return false
 }
+function verifyPathAccess(user, pathParam) {
+  pathParam = pathParam.split(base)
+  if (pathParam.length < 2) return false
+  pathParam = pathParam[1].split(path.sep).slice(1)
+  const condition1 = !!(user && user.id && user.id == pathParam[1])
+  const condition2 = pathParam[1] == 'publicDirectories'
+  if (condition2) return true
+  if (condition1) return true
+  return false
+}
+function paramsToArray(params, getAbsPath = false) {
+  if (!params) return false
+  const isArray = getArray(params)
+  if (isArray) params = isArray
+  else params = [params]
+  if (getAbsPath) return paramsToAbspath(params)
+  return params
+}
+function getArray(array) {
+  try {
+    if (typeof array === 'string' && array.startsWith('[')) {
+      const parsed = JSON.parse(array);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+    return false
+  } catch (err) {
+    console.error('Error parsing resourceUrl:', err);
+  }
+}
+function paramsToAbspath(params) {
+  if (!params) return false
+  const newArray = []
+  params.forEach((param) => {
+    newArray.push(getAbsPath(param))
+  })
+  return newArray
+
+}
 module.exports = {
   readDirectory, deleteDirectory,
   getAbsPath, changeResourceLocation, getRandomString,
   getCookie, fileExists, validateJson, validateUpdate,
   checkPathLength, verifyPathAccess, isPrivateDir, getDecodedToken,
-  getMimeType, getOrigins, hasBody, checkSeparator, JSONisNotEmpty
+  getMimeType, getOrigins, hasBody, checkSeparator, JSONisNotEmpty,
+  getArray, verifyToken, paramsToArray, paramsToAbspath
 };
