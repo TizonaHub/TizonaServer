@@ -138,7 +138,6 @@ app.delete('/api/resources', upload.none(), (req, res, next) => { //deleteresour
   const cookies = req.headers.cookie
   const token = cF.getCookie('userToken', cookies)
   paramsArray.forEach((resource) => {
-    0
     if (!fs.existsSync(resource)) throw new Error('resource does not exist')
     let access = false
     if (!token) {
