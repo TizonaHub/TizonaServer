@@ -12,6 +12,7 @@ const { body, validationResult, param, cookie } = require('express-validator');
 const packageJson = require('./package.json')
 let dbFuncs = require('./dbFunctions')
 const os = require('os');
+const archiver = require('archiver');
 process.loadEnvFile()
 
 const corsOptions = {
@@ -138,7 +139,7 @@ app.delete('/api/resources', upload.none(), (req, res, next) => { //deleteresour
   const cookies = req.headers.cookie
   const token = cF.getCookie('userToken', cookies)
   paramsArray.forEach((resource) => {
-    if (!fs.existsSync(resource)) throw new Error('resource: '+ resource+' does not exist')
+    if (!fs.existsSync(resource)) throw new Error('resource: ' + resource + ' does not exist')
     let access = false
     if (!token) {
       access = cF.verifyPathAccess(null, resource)
@@ -288,9 +289,51 @@ app.patch('/api/resources/move', upload.none(), async (req, res, next) => {
       return next(error)
     }
   }
-    return res.send()
+  return res.send()
 });
 
+app.post('/api/resources/zip', upload.none(), async (req, res, next) => {
+  const cookies = req.headers.cookie;
+  const token = cF.getCookie("userToken", cookies);
+  const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
+  let uris = cF.paramsToArray(params["resources"]);
+  console.log("uris: ", uris);
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="resources.zip"'
+  );
+
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  archive.on("error", (err) => {
+    let error = new Error(err.message);
+    error.status = 500;
+    return next(error);
+  });
+  archive.pipe(res);
+
+  let decoded = false;
+  try {
+    decoded = cF.verifyToken(token, jwtKey);
+  } catch (error) {
+    console.error("Invalid token", error);
+  }
+  for (let uri of uris) {
+    const absPath = cF.getAbsPath(uri);
+    const accessSource = cF.verifyPathAccess(decoded, absPath);
+    if (!accessSource) continue;
+    if (!fs.existsSync(absPath)) continue;
+    let nameInZip = path.relative(cF.getAbsPath('/'), absPath);
+    
+    nameInZip = nameInZip.split(path.sep).join("/"); // ZIP uses '/', not backslashes
+    console.log('nameInZip: ', nameInZip);
+
+    archive.file(absPath, { name: nameInZip });
+  }
+
+  archive.finalize();
+})
 /**
  * USERS
  */
@@ -467,7 +510,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
   let platformCommand = 'python'
   if (platform != 'win32') platformCommand = 'python3'
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
-  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname, '..')],{windowsHide:true})
+  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname, '..')], { windowsHide: true })
 
   script.on('error', (error) => {
     console.error(error.message, ' at /api/getCharts');
