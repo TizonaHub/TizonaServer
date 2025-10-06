@@ -202,7 +202,7 @@ app.get('/api/resources/directories', async (req, res, next) => { //getDirectori
         type: 'directory',
         name: decoded.id,
         children: privateDir,
-        uri: path,
+        uri: `/directories/${decoded.id}`, //path,
         personal: true,
       })
     } catch (error) {
@@ -324,12 +324,19 @@ app.post('/api/resources/zip', upload.none(), async (req, res, next) => {
     const accessSource = cF.verifyPathAccess(decoded, absPath);
     if (!accessSource) continue;
     if (!fs.existsSync(absPath)) continue;
-    let nameInZip = path.relative(cF.getAbsPath('/'), absPath);
-    
-    nameInZip = nameInZip.split(path.sep).join("/"); // ZIP uses '/', not backslashes
-    console.log('nameInZip: ', nameInZip);
 
-    archive.file(absPath, { name: nameInZip });
+    const stat = fs.statSync(absPath);
+    let nameInZip = path.relative(cF.getAbsPath('/'), absPath);
+    nameInZip = nameInZip.split(path.sep).join("/"); // ZIP uses '/', not backslashes
+    if (stat.isDirectory()) {
+      if(decoded && nameInZip.includes(decoded.id)){
+        nameInZip=nameInZip.replace(decoded.id,'Private')
+      }
+      archive.directory(absPath, nameInZip);
+    }
+    else {
+      archive.file(absPath, { name: nameInZip });
+    }
   }
 
   archive.finalize();
