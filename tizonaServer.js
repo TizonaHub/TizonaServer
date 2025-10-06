@@ -138,7 +138,7 @@ app.delete('/api/resources', upload.none(), (req, res, next) => { //deleteresour
   const cookies = req.headers.cookie
   const token = cF.getCookie('userToken', cookies)
   paramsArray.forEach((resource) => {
-    if (!fs.existsSync(resource)) throw new Error('resource does not exist')
+    if (!fs.existsSync(resource)) throw new Error('resource: '+ resource+' does not exist')
     let access = false
     if (!token) {
       access = cF.verifyPathAccess(null, resource)
@@ -467,7 +467,7 @@ app.get('/api/system/charts', (req, res) => { //getCharts
   let platformCommand = 'python'
   if (platform != 'win32') platformCommand = 'python3'
   const pythonScriptPath = path.resolve(__dirname, './scripts/serverCharts.py');
-  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname, '..')])
+  const script = execFile(platformCommand, [pythonScriptPath, path.join(__dirname, '..')],{windowsHide:true})
 
   script.on('error', (error) => {
     console.error(error.message, ' at /api/getCharts');
