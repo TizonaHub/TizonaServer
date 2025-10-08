@@ -15,7 +15,7 @@ def get_directory_size(directory):
     return total_size
 
 
-def readData(index):
+def readData(index=False):
     info=None 
     program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
     app_data_dir = os.path.join(program_data, "TizonaHub")
