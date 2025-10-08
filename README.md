@@ -78,3 +78,11 @@ NODE_ENV=production
   node --watch start.js
 ```
 
+## 🧪 Testing
+
+To run all tests, execute:
+```npx jest
+```
+To run a specific test:
+```npx jest tests/system/apiSystem.test.js
+```
