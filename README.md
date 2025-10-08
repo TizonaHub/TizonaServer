@@ -81,8 +81,10 @@ NODE_ENV=production
 ## 🧪 Testing
 
 To run all tests, execute:
-```npx jest
+```bash
+npx jest
 ```
 To run a specific test:
-```npx jest tests/system/apiSystem.test.js
+```bash
+npx jest tests/system/apiSystem.test.js
 ```
