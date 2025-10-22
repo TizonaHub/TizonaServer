@@ -15,17 +15,26 @@ def get_directory_size(directory):
     return total_size
 
 
+def make_json_serializable(obj):
+    if isinstance(obj, set):
+        return next(iter(obj)) if len(obj) == 1 else list(obj)
+    elif isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [make_json_serializable(v) for v in obj]
+    else:
+        return obj
 def readData(index=False):
-    info=None 
+    info = None 
     program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
     app_data_dir = os.path.join(program_data, "TizonaHub")
     data_file = os.path.join(app_data_dir, "data.dat")
     try:
         with open(data_file, "rb") as f:
-                info = pickle.load(f)
-                return info if not index else list(info.values())[index]
+            info = pickle.load(f)
+            return info if not index else list(info.values())[index]
     except Exception as e:
-        print('Error at readData',e)
+        print('Error at readData', e, file=sys.stderr)
         return False
     
 result={ 
@@ -37,6 +46,5 @@ result={
     "clientVersion":readData(1),
     "managerVersion":readData(3)
 }
-
-
+result = make_json_serializable(result)
 print(json.dumps(result)) 
