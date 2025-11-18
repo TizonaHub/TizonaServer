@@ -13,6 +13,8 @@ const packageJson = require('./package.json')
 let dbFuncs = require('./dbFunctions')
 const os = require('os');
 const archiver = require('archiver');
+const extract = require('extract-zip');
+const { exec } = require('child_process')
 process.loadEnvFile()
 
 const corsOptions = {
@@ -31,28 +33,44 @@ const jwtKey = process.env.JWT_KEY
 //
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    handlePostFiles(req, cb)
+    handlePostFiles(req, cb, file)
   },
   filename: function (req, file, cb) {
     const path = req.route.path
     if (path == '/api/updateUser') {
-      let extension = file.originalname.split('.')
-      extension = extension[extension.length - 1]
+      let nameSplit = file.originalname.split('.')
+      extension = nameSplit[nameSplit.length - 1]
       let name = Math.floor(Date.now() / 1000) + '.' + extension;
       cb(null, name)
+    }
+    else if (path == '/api/system/plugins') {
+      let nameSplit = file.originalname.split('.')
+      extension = nameSplit[nameSplit.length - 1]
+      let name = nameSplit[0] + '_temp' + '.' + extension;
+      cb(null, name)
+
     }
     else cb(null, file.originalname)
   }
 })
 const upload = multer({ storage: storage })
-function handlePostFiles(req, cb) {
+function handlePostFiles(req, cb, file) {
   let directory = cF.getAbsPath(req.body.directory)
   const path = req.route.path
+  const isPlugin = path && path == '/api/system/plugins'
+  if (isPlugin) {
+    if (file && file.mimetype != 'application/zip') {
+      const error = new Error("Plugin file is not a .zip file")
+      error.status = 415
+      cb(error)
+    }
+    return cb(null, './plugins');
+  }
   if (path && path == '/api/users') { //single upload
     directory = './' + process.env.STATIC + '/userProfileImages'
-    cb(null, directory);
+    return cb(null, directory);
   }
-  else if (directory) {
+  else if (directory && (isPlugin)) {
     const token = cF.getCookie('userToken', req.headers.cookie)
     if (token) {
       try {
@@ -60,7 +78,7 @@ function handlePostFiles(req, cb) {
         const access = cF.verifyPathAccess(decoded, directory)
         if (!access) throw new Error('forbidden');
       } catch (error) {
-        error.code = 403
+        error.status = 403
         error.stack = null
         return cb(error);
       }
@@ -81,7 +99,6 @@ app.use((req, res, next) => {
       const access = cF.verifyPathAccess(decoded, cF.getAbsPath(url))
       if (!access) throw new Error('forbidden');
     } catch (error) {
-      //console.log('url: ', cF.getAbsPath(url));
       console.error('error at ' + cF.getAbsPath(url) + ' :' + error.message);
       error.status = 404
       return next(error)
@@ -92,15 +109,46 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, process.env.STATIC)));// Serve static files from the React app 
 app.use(express.static(path.join(__dirname, 'dist')));// Serves static files from the React app 
+app.use(express.static(path.join(__dirname, 'plugins')));
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 
-
-
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+(async () => {
+  let pluginsDirData = []
+  try {
+    pluginsDirData = await fs.readdir('./plugins')
+  } catch (error) {
+    error.status = 500
+    return console.log(error);
+  }
+
+  pluginsDirData.forEach(async (res) => {
+    try {
+      if (res == '.gitkeep') return
+      const dirPath = './plugins/' + res
+      const info = await fs.stat(dirPath);
+      if (!info.isDirectory()) return;
+      dirData = await fs.readdir(dirPath)
+      const clientPath = path.join(dirPath, "/client");
+      const backendPath = path.resolve(__dirname, dirPath, "backend.js");
+      try {
+        require(backendPath);
+      } catch (error) {
+        console.log('error: ', error.message);
+      }
+      app.get('/' + res, (req, res) => {
+        res.sendFile(path.join(__dirname, clientPath, 'index.html'));
+      });
+    } catch (error) {
+      error.status = 500
+      return console.log(error.message);
+    }
+  });
+})();
 /**
  * API
  */
@@ -329,8 +377,8 @@ app.post('/api/resources/zip', upload.none(), async (req, res, next) => {
     let nameInZip = path.relative(cF.getAbsPath('/'), absPath);
     nameInZip = nameInZip.split(path.sep).join("/"); // ZIP uses '/', not backslashes
     if (stat.isDirectory()) {
-      if(decoded && nameInZip.includes(decoded.id)){
-        nameInZip=nameInZip.replace(decoded.id,'Private')
+      if (decoded && nameInZip.includes(decoded.id)) {
+        nameInZip = nameInZip.replace(decoded.id, 'Private')
       }
       archive.directory(absPath, nameInZip);
     }
@@ -527,6 +575,80 @@ app.get('/api/system/charts', (req, res) => { //getCharts
     data = JSON.parse(data)
     return res.send(data)
   })
+})
+app.get('/api/system/plugins', async (req, res, next) => {
+  try {
+    const pluginsDirData = await fs.readdir('./plugins');
+    const pluginsArray = [];
+    for (const dir of pluginsDirData) {
+      try {
+        const dirPath = `./plugins/${dir}`;
+        const manifestPath = path.join(dirPath, "manifest.json");
+        const manifestData = await fs.readFile(manifestPath, "utf8");
+        const manifestJSON = JSON.parse(manifestData);
+
+        pluginsArray.push({
+          name: manifestJSON.name,
+          icon: path.join(dir, manifestJSON.icon),
+          frontEnd: path.join(dir, 'client'),
+          devUrl: manifestJSON.devUrl,
+          devMode: manifestJSON.devMode,
+          dependency:manifestJSON.dependency,
+          publisher:manifestJSON.publisher,
+          repository:manifestJSON.repository,
+          description:manifestJSON.description,
+          url:manifestJSON.url,
+          license:manifestJSON.license,
+          version:manifestJSON.version
+        });
+
+      } catch (error) {
+        if(!dir == '.gitkeep') console.warn(`⚠️ Error reading ${dir} info:`, error.message);
+      }
+    }
+    return res.json({ pluginsArray });
+  } catch (error) {
+    error.status = 500;
+    return next(error);
+  }
+});
+
+app.post('/api/system/plugins', upload.single('plugin'), async (req, res, next) => {
+  async function installPlugin(file) {
+    console.log('file: ', file);
+    const overwrite = req.query.overwrite === 'true'
+    const relDest = path.join('plugins', file.originalname.slice(0, file.originalname.lastIndexOf('.zip')))
+    const dest = path.join(relDest)
+    if (overwrite === false && fs.existsSync(relDest)) {
+      console.error('This plugin already exists')
+      return res.status(409).send({ message: 'Plugin with same name already exists' })
+    }
+    if (fs.existsSync(file.path)) {
+      try {
+        await extract(file.path, { dir: path.join(__dirname, dest) });
+        const installScriptExists = fs.readFileSync(path.join(dest, "/scripts/install.js"), "utf-8");
+        if (installScriptExists) {
+          exec("node " + path.join(dest, "scripts/install.js"), (error, stdout, stderr) => {
+            if (error) {
+              error.message = "Error at installation script: " + error.message;
+              error.status = 500;
+              return next(error);  
+            }
+          });
+        }
+            res.send()
+      }
+      catch (error) {
+        error.status = 500
+        return next(error)
+      }
+    } else {
+      res.status(404).send({ message: 'Could not find plugin zip' })
+    }
+
+  }
+  await installPlugin(req.file)
+  //res.send()
 })
 /**
  *  AUTH
