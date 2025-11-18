@@ -2,7 +2,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-process.loadEnvFile()
+
+process.loadEnvFile(path.resolve(__dirname, ".env"))
 const jwtKey = process.env.JWT_KEY
 const base = path.join(__dirname, process.env.STATIC)
 
@@ -80,8 +81,8 @@ async function changeResourceLocation(newLocation, source) {
     await fs.move(source, newLocation);
     return true;
   } catch (err) {
-    err.message='Error at changeResourceLocation(): '+err.message
-    err.status=500
+    err.message = 'Error at changeResourceLocation(): ' + err.message
+    err.status = 500
     throw err
   }
 }
@@ -261,11 +262,14 @@ function paramsToAbspath(params) {
   return newArray
 
 }
+function getEnvPath() {
+  return path.resolve(__dirname, ".env");
+}
 module.exports = {
   readDirectory, deleteDirectory,
   getAbsPath, changeResourceLocation, getRandomString,
   getCookie, fileExists, validateJson, validateUpdate,
   checkPathLength, verifyPathAccess, isPrivateDir, getDecodedToken,
   getMimeType, getOrigins, hasBody, checkSeparator, JSONisNotEmpty,
-  getArray, verifyToken, paramsToArray, paramsToAbspath
+  getArray, verifyToken, paramsToArray, paramsToAbspath, getEnvPath,
 };
