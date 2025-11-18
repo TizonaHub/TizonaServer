@@ -1,22 +1,22 @@
 const mysql = require('mysql2');
-const bcrypt =require('bcrypt')
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_USER_PASSWORD,
-  database: process.env.DB,
-  charset: 'utf8mb4'
+const bcrypt = require('bcrypt')
+let connection = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_USER_PASSWORD,
+    database: process.env.DB,
+    charset: 'utf8mb4'
 });
 
 connection.connect((err) => {
-  if (err) {
-    console.error('Unable to connect:', err.message);
-    return;
-  }
-  console.log('Connected to database');
+    if (err) {
+        console.error('Unable to connect:', err.message);
+        return;
+    }
+    console.log('Connected to database');
 });
-function getConnectionStatus(){
-    if(connection._closing) return false
+function getConnectionStatus() {
+    if (connection._closing) return false
     return true
 }
 async function checkAdminUser() {
@@ -35,7 +35,21 @@ async function checkAdminUser() {
     });
 
 }
-async function getUserById( id) {
+async function checkTable(tableName) {
+    if (connection._closing) return false
+    return new Promise((resolve, reject) => {
+        connection.execute(`select * from ${tableName} limit 1`, [tableName],
+            (err, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result[0]);
+                }
+            });
+    });
+
+}
+async function getUserById(id) {
     if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute('select id,name,username,role,tokenMinDate,createdAt,avatar from users where id = ?', [id],
@@ -49,7 +63,7 @@ async function getUserById( id) {
             });
     });
 
-}async function deleteUserById( id) {
+} async function deleteUserById(id) {
     if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute('delete from users where id = ?', [id],
@@ -80,34 +94,33 @@ async function getUsers() {
     });
 
 }
-async function checkCredentials( username, password) {
+async function checkCredentials(username, password) {
     if (connection._closing) return false
     try {
-        let user= await new Promise((resolve, reject) => {
+        let user = await new Promise((resolve, reject) => {
             connection.execute(
-              'select * from users where username = ?', [username],
-              (err, rows, fields) => {
-                if (err instanceof Error) {
-                  console.log(err);
-                  reject(err);  
-                  return;
+                'select * from users where username = ?', [username],
+                (err, rows, fields) => {
+                    if (err instanceof Error) {
+                        console.log(err);
+                        reject(err);
+                        return;
+                    }
+                    resolve(rows[0]);
                 }
-                resolve(rows[0]);  
-              }
             );
-          });
-          if(user){
-            if (await bcrypt.compare(password,user.password)) return user
+        });
+        if (user) {
+            if (await bcrypt.compare(password, user.password)) return user
             return false
-          }
+        }
 
     } catch (err) {
         console.error('Error: ', err);
-        throw err; 
+        throw err;
     }
 }
 async function executeQuery(query, params) {
-    console.log('query: ', query);
     if (connection._closing) return false
     return new Promise((resolve, reject) => {
         connection.execute(query, params, (err, results) => {
@@ -119,9 +132,31 @@ async function executeQuery(query, params) {
         });
     });
 }
+function disconnect() {
+    connection.end(err => {
+        if (err) return console.error('Error when stopping connection:', err);
+    });
+}
+function connect() {
+    connection = mysql.createConnection({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_USER_PASSWORD,
+        database: process.env.DB,
+        charset: 'utf8mb4'
+    });
 
+    connection.connect((err) => {
+        if (err) {
+            console.error('Unable to connect:', err.message);
+            return;
+        }
+        console.log('Connected to database');
+    });
+}
 
 module.exports = {
-    checkAdminUser, getUserById, checkCredentials,getUsers,deleteUserById,executeQuery,getConnectionStatus
-    ,connection
+    checkAdminUser, getUserById, checkCredentials, getUsers, deleteUserById, 
+    executeQuery, getConnectionStatus,checkTable,connect
+    , disconnect, connection
 }
