@@ -20,5 +20,8 @@ storage/userProfileImages/*
 !storage/directories/publicDirectories/
 storage/directories/publicDirectories/*
 !storage/directories/publicDirectories/.gitkeep
+plugins/*
+!plugins/.gitkeep
 
 TizonaServer.zip
+
