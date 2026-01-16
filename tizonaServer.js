@@ -37,13 +37,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const path = req.route.path
-    if (path == '/api/updateUser') {
-      let nameSplit = file.originalname.split('.')
-      extension = nameSplit[nameSplit.length - 1]
-      let name = Math.floor(Date.now() / 1000) + '.' + extension;
-      cb(null, name)
-    }
-    else if (path == '/api/system/plugins') {
+    if (path == '/api/system/plugins') {
       let nameSplit = file.originalname.split('.')
       extension = nameSplit[nameSplit.length - 1]
       let name = nameSplit[0] + '_temp' + '.' + extension;
@@ -59,10 +53,10 @@ function handlePostFiles(req, cb, file) {
   const path = req.route.path
   const isPlugin = path && path == '/api/system/plugins'
   if (isPlugin) {
-    if (file && file.mimetype != 'application/zip') {
+    if (file && !file.mimetype.includes('zip')) {
       const error = new Error("Plugin file is not a .zip file")
       error.status = 415
-      cb(error)
+      return cb(error)
     }
     return cb(null, './plugins');
   }
@@ -70,7 +64,7 @@ function handlePostFiles(req, cb, file) {
     directory = './' + process.env.STATIC + '/userProfileImages'
     return cb(null, directory);
   }
-  else if (directory && (isPlugin)) {
+  else if (directory) {
     const token = cF.getCookie('userToken', req.headers.cookie)
     if (token) {
       try {
@@ -89,7 +83,8 @@ function handlePostFiles(req, cb, file) {
 }
 
 app.use(cors(corsOptions));
-app.use((req, res, next) => {
+
+app.use((req, res, next) => { //seems deprecated
   const url = req.originalUrl
   if (req.originalUrl.length > 1
     && url.startsWith('/directories')) {
@@ -97,7 +92,7 @@ app.use((req, res, next) => {
     try {
       const decoded = token ? jwt.verify(token, jwtKey) : { id: 'null' }
       const access = cF.verifyPathAccess(decoded, cF.getAbsPath(url))
-      if (!access) throw new Error('forbidden');
+      if (!access) throw new Error('not found');
     } catch (error) {
       console.error('error at ' + cF.getAbsPath(url) + ' :' + error.message);
       error.status = 404
@@ -107,8 +102,71 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, process.env.STATIC)));// Serve static files from the React app 
-app.use(express.static(path.join(__dirname, 'dist')));// Serves static files from the React app 
+app.get('/directories/*', async (req, res, next) => {
+
+  //validation
+  const url = req.originalUrl
+  const token = cF.getCookie('userToken', req.headers.cookie)
+  try {
+    const decoded = token ? jwt.verify(token, jwtKey) : { id: 'null' }
+    const access = cF.verifyPathAccess(decoded, cF.getAbsPath(url))
+    if (!access) throw new Error('forbidden');
+  } catch (error) {
+    console.error('error at ' + cF.getAbsPath(url) + ' :' + error.message);
+    error.status = 404
+    return next(error)
+  }
+
+  try {
+    const filePath = cF.getAbsPath(decodeURIComponent(req.originalUrl));
+
+    if (!fs.existsSync(filePath)) {
+      const error = new Error('File not found');
+      error.status = 404;
+      return next(error);
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    const extension = path.extname(filePath).toLowerCase();
+    const mimeType = await cF.getMimeType(extension)
+    const isVideo = mimeType.toLowerCase().includes('video');
+
+
+    if (!isVideo) {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': mimeType || 'application/octet-stream'
+      });
+      return fs.createReadStream(filePath).pipe(res);
+    }
+
+    // if it is video, chunk streaming
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+    const chunkSize = (end - start) + 1;
+
+    const stream = fs.createReadStream(filePath, { start, end });
+
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunkSize,
+      'Content-Type': mimeType || 'video/mp4'
+    });
+    stream.pipe(res);
+
+  } catch (error) {
+    error.status = 500;
+    next(error);
+  }
+});
+
+app.use(express.static(path.join(__dirname, process.env.STATIC)));
+app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.static(path.join(__dirname, 'plugins')));
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
@@ -123,7 +181,7 @@ app.get('/', (req, res) => {
     pluginsDirData = await fs.readdir('./plugins')
   } catch (error) {
     error.status = 500
-    return console.log(error);
+    return console.error(error);
   }
 
   pluginsDirData.forEach(async (res) => {
@@ -135,17 +193,19 @@ app.get('/', (req, res) => {
       dirData = await fs.readdir(dirPath)
       const clientPath = path.join(dirPath, "/client");
       const backendPath = path.resolve(__dirname, dirPath, "backend.js");
+      cF.writeDataFile(dirPath)
       try {
+
         require(backendPath);
       } catch (error) {
-        console.log('error: ', error.message);
+        console.error('error: ', error.message);
       }
       app.get('/' + res, (req, res) => {
         res.sendFile(path.join(__dirname, clientPath, 'index.html'));
       });
     } catch (error) {
       error.status = 500
-      return console.log(error.message);
+      return console.error(error.message);
     }
   });
 })();
@@ -228,6 +288,17 @@ app.get('/api/resources/info', async (req, res) => { //getresourceinfo
     return next(error)
   }
 })
+app.get('/api/resources/download', (req, res) => {
+  const filePath = cF.getAbsPath(req.query.path);
+  const name = path.basename(req.query.path);
+
+  res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+  res.setHeader("Content-Type", cF.getMimeType(filePath) || "application/octet-stream");
+
+  const stream = fs.createReadStream(filePath);
+  stream.pipe(res);
+});
+
 app.get('/api/resources/directories', async (req, res, next) => { //getDirectories
   const queryParams = req.query
   let directory = queryParams['directory'] ?? path.join('directories', 'publicDirectories');
@@ -340,17 +411,17 @@ app.patch('/api/resources/move', upload.none(), async (req, res, next) => {
   return res.send()
 });
 
-app.post('/api/resources/zip', upload.none(), async (req, res, next) => {
+app.get('/api/resources/zip', upload.none(), async (req, res, next) => {
   const cookies = req.headers.cookie;
   const token = cF.getCookie("userToken", cookies);
   const params = cF.JSONisNotEmpty(req.query) || cF.JSONisNotEmpty(req.body);
   let uris = cF.paramsToArray(params["resources"]);
-  console.log("uris: ", uris);
+  console.error("uris: ", uris);
 
   res.setHeader("Content-Type", "application/zip");
   res.setHeader(
     "Content-Disposition",
-    'attachment; filename="resources.zip"'
+    `attachment; filename="TizonaHub-Download-${getDate()}.zip"`
   );
 
   const archive = archiver("zip", { zlib: { level: 9 } });
@@ -388,6 +459,12 @@ app.post('/api/resources/zip', upload.none(), async (req, res, next) => {
   }
 
   archive.finalize();
+
+
+  function getDate() {
+    let currentDate = new Date()
+    return currentDate.toLocaleDateString().replaceAll('/', '-')
+  }
 })
 /**
  * USERS
@@ -465,12 +542,12 @@ WHERE id = ?`;
           query = query + `, '$.${avatarProp[0]}', ?`
         }
       })
+      let path = null
       if (file) {
-        const path = `./userProfileImages/${file.filename}`
-        params.push(path)
-        query = query + `, '$.profileImage', ?`
+        path = `./userProfileImages/${file.filename}`
       }
-      query = query + ")"
+      params.push(path)
+      query = query + `, '$.profileImage', ?)`
       return [query, params]
     }
 
@@ -514,13 +591,15 @@ app.post('/api/users', upload.none(), //createUser
     const hash = await bcrypt.hash(req.body.password, saltRounds);
     const colors = ['#ff000', '#0080000', '#800080', '#FFA500', '#a52a2a']
     const color = colors[Math.floor(Math.random() * colors.length)]
-    let json = JSON.stringify({ profileImage: null, bgColor: color, shadowFilter: 0 });
+    let avatar = JSON.stringify({ profileImage: null, bgColor: color, shadowFilter: 0 });
     let query = `insert into users values(?,?,?,?,?,?,default,default);`;
     const adminIsCreated = await dbFuncs.checkAdminUser()
     const role = adminIsCreated ? 0 : 100
     try {
-      await dbFuncs.executeQuery(query, [id, name, username, hash, role, json])
-      const user = { id: id, name: name, username: username, role: role }
+      result = await dbFuncs.executeQuery('select id from users where name=?', [username])
+      if (result.length > 0) return res.sendStatus(409)
+      await dbFuncs.executeQuery(query, [id, name, username, hash, role, avatar])
+      const user = { id: id, name: name, username: username, role: role, avatar: avatar }
       const token = jwt.sign(user, jwtKey, { expiresIn: '365d' });
       try {
         const uri = process.env.STATIC + '/directories/' + id
@@ -581,74 +660,202 @@ app.get('/api/system/plugins', async (req, res, next) => {
     const pluginsDirData = await fs.readdir('./plugins');
     const pluginsArray = [];
     for (const dir of pluginsDirData) {
+      let missingManifest = false
+      let missingDataFile = false
+      let manifestJSON = {}
+      let dataJSON = {}
+      const dirPath = `./plugins/${dir}`;
       try {
-        const dirPath = `./plugins/${dir}`;
+        if (!fs.statSync(dirPath).isDirectory()) continue
         const manifestPath = path.join(dirPath, "manifest.json");
         const manifestData = await fs.readFile(manifestPath, "utf8");
-        const manifestJSON = JSON.parse(manifestData);
-
-        pluginsArray.push({
-          name: manifestJSON.name,
-          icon: path.join(dir, manifestJSON.icon),
-          frontEnd: path.join(dir, 'client'),
-          devUrl: manifestJSON.devUrl,
-          devMode: manifestJSON.devMode,
-          dependency:manifestJSON.dependency,
-          publisher:manifestJSON.publisher,
-          repository:manifestJSON.repository,
-          description:manifestJSON.description,
-          url:manifestJSON.url,
-          license:manifestJSON.license,
-          version:manifestJSON.version
-        });
-
-      } catch (error) {
-        if(!dir == '.gitkeep') console.warn(`⚠️ Error reading ${dir} info:`, error.message);
+        manifestJSON = JSON.parse(manifestData);
       }
+      catch (error) {
+        console.error(error.message);
+        missingManifest = true
+
+      }
+      try {
+
+        const dataPath = path.join(dirPath, '.data')
+        const dataDat = fs.readFileSync(dataPath, "utf-8")
+        dataJSON = JSON.parse(dataDat)
+      } catch (error) {
+        console.error(error.message);
+        missingDataFile = true
+
+      }
+
+      pluginsArray.push({
+        missingDataFile: missingDataFile,
+        missingManifest: missingManifest,
+        id: dataJSON.id,
+        name: manifestJSON.name,
+        icon: !missingManifest && manifestJSON.icon
+          ? path.join(dir, manifestJSON.icon)
+          : null,
+        frontEnd: path.join(dir, 'client'),
+        devUrl: manifestJSON.devUrl,
+        devMode: manifestJSON.devMode,
+        dependency: manifestJSON.dependency,
+        publisher: manifestJSON.publisher,
+        repository: manifestJSON.repository,
+        description: manifestJSON.description,
+        url: manifestJSON.url,
+        license: manifestJSON.license,
+        version: manifestJSON.version
+      });
     }
-    return res.json({ pluginsArray });
+    return res.json({ pluginsArray })
   } catch (error) {
     error.status = 500;
     return next(error);
   }
 });
+app.delete('/api/system/plugins', async (req, res, next) => {
+  const pluginID = req.query.pluginID
+  if (!pluginID) return res.sendStatus(400)
+  let pluginsDirData = []
+  pluginsDirData = await fs.readdir('./plugins')
+  let pluginToDelete = null
+  try {
+    for (const plugin of pluginsDirData) {
+      try {
+        if (plugin === '.gitkeep') continue;
 
+        const dirPath = './plugins/' + plugin;
+        const info = await fs.stat(dirPath);
+        if (!info.isDirectory()) continue;
+        const data = JSON.parse(fs.readFileSync(path.join(dirPath, '.data'), "utf8"));
+
+
+        if (data.id == pluginID) {
+          pluginToDelete = dirPath;
+          break;
+        }
+      } catch (error) {
+        console.error(error.message);
+      }
+    }
+    if (!pluginToDelete) return res.status(400).send()
+    const uninstallPath = path.join(pluginToDelete, 'scripts/uninstall.js')
+    if (fs.existsSync(uninstallPath)) {
+      await executeUninstall(uninstallPath)
+    }
+    await fs.remove(pluginToDelete)
+    res.send()
+    pluginsDirData = await fs.readdir('./plugins')
+  } catch (error) {
+    error.status = 500
+    return next(error)
+  }
+  async function executeUninstall(uninstallPath) {
+    return new Promise((resolve, reject) => {
+      exec(`node "${uninstallPath}"`, { timeout: 10000 }, (error, stdout, stderr) => {
+        if (error) {
+          error.message = `Error at uninstall script for ${pluginToDelete}: ` + error.message;
+          error.status = 500;
+          return reject(error);
+        }
+        resolve(stdout);
+      });
+    });
+  }
+})
 app.post('/api/system/plugins', upload.single('plugin'), async (req, res, next) => {
   async function installPlugin(file) {
-    console.log('file: ', file);
+    if (!file) {
+      await fs.remove(file.path)
+      return res.status(400).send()
+    }
+    const decoded = cF.getDecodedToken(req)
+    const isAdmin = cF.isAdmin(decoded)
+    if (!isAdmin) return res.status(403).send()
     const overwrite = req.query.overwrite === 'true'
     const relDest = path.join('plugins', file.originalname.slice(0, file.originalname.lastIndexOf('.zip')))
     const dest = path.join(relDest)
     if (overwrite === false && fs.existsSync(relDest)) {
       console.error('This plugin already exists')
+      await fs.remove(file.path)
       return res.status(409).send({ message: 'Plugin with same name already exists' })
     }
     if (fs.existsSync(file.path)) {
       try {
         await extract(file.path, { dir: path.join(__dirname, dest) });
+        await fs.remove(file.path)
         const installScriptExists = fs.readFileSync(path.join(dest, "/scripts/install.js"), "utf-8");
         if (installScriptExists) {
           exec("node " + path.join(dest, "scripts/install.js"), (error, stdout, stderr) => {
             if (error) {
               error.message = "Error at installation script: " + error.message;
               error.status = 500;
-              return next(error);  
+              return next(error);
             }
           });
         }
-            res.send()
       }
       catch (error) {
         error.status = 500
         return next(error)
       }
+      cF.writeDataFile(dest, true)
+      res.send()
     } else {
       res.status(404).send({ message: 'Could not find plugin zip' })
     }
 
   }
   await installPlugin(req.file)
-  //res.send()
+  res.send()
+})
+app.patch('/api/system/plugins', upload.none(), async (req, res, next) => {
+  const pluginID = req.query['pluginID']
+  if (!pluginID) return res.sendStatus(400)
+  let pluginsDirData = []
+  pluginsDirData = await fs.readdir('./plugins')
+  try {
+    let pluginToUpdate = null
+    for (const plugin of pluginsDirData) {
+      try {
+        if (plugin === '.gitkeep') continue;
+
+        const dirPath = './plugins/' + plugin;
+        const info = await fs.stat(dirPath);
+        if (!info.isDirectory()) continue;
+        const data = JSON.parse(fs.readFileSync(path.join(dirPath, '.data'), "utf8"));
+        if (data.id == pluginID) {
+          pluginToUpdate = dirPath;
+          break;
+        }
+      } catch (error) {
+        console.error(error.message);
+      }
+    }
+    if (!pluginToUpdate) return res.status(400).send()
+    const updatePath = path.join(pluginToUpdate, 'scripts/update.js')
+    if (fs.existsSync(updatePath)) {
+      await executeUpdate(updatePath)
+    }
+    else return res.sendStatus(404)
+    res.send()
+    pluginsDirData = await fs.readdir('./plugins')
+  } catch (error) {
+    error.status = 500
+    return next(error)
+  }
+  async function executeUpdate(updatePath) {
+    return new Promise((resolve, reject) => {
+      exec("node " + updatePath, (error, stdout, stderr) => {
+        if (error) {
+          error.message = `Error at update script: ` + error.message;
+          error.status = 500;
+          return next(error);
+        }
+        resolve(stdout);
+      });
+    });
+  }
 })
 /**
  *  AUTH

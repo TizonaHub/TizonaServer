@@ -1,5 +1,5 @@
-
 const fs = require('fs-extra');
+const fswin = require('fswin')
 const path = require('path');
 const jwt = require('jsonwebtoken');
 
@@ -91,12 +91,29 @@ function isPrivateDir(path) {
   if (path.split('/')[3] != 'appDirectories') return true
   return false
 }
+/**
+ * 
+ * @param {*} user decoded user token
+ * @param {*} pathParam absolute path
+ * @returns 
+ */
+
+function verifyToken(token, jwtKey) {
+  if (!token || !jwtKey) return false
+  try {
+    return jwt.verify(token, jwtKey)
+  } catch (error) {
+    console.error(error.message);
+    error.status = 500
+    return next(error)
+  }
+}
 function getDecodedToken(req) {
-  if (!req) return false
+  if (!req) return undefined
   try {
     const cookie = req.headers.cookie
     const token = getCookie('userToken', cookie)
-    if (!token) return false
+    if (!token) return undefined
     const decoded = jwt.verify(token, jwtKey)
     return decoded
   } catch (error) {
@@ -118,23 +135,6 @@ function checkSeparator(param) {
   param = param || '/'
   if (param[0] != '/') param = '/' + param
   return param
-}
-/**
- * 
- * @param {*} user decoded user token
- * @param {*} pathParam absolute path
- * @returns 
- */
-
-function verifyToken(token, jwtKey) {
-  if (!token || !jwtKey) return false
-  try {
-    return jwt.verify(token, jwtKey)
-  } catch (error) {
-    console.error('error at /api/deleteResource: ', error.message);
-    error.status = 500
-    return next(error)
-  }
 }
 /**
  * 
@@ -165,10 +165,10 @@ async function getMimeType(filePath) {
   const mimeType = mime.default.getType(filePath);
   return mimeType
 }
-function getRandomString() {
+function getRandomString(length = 24) {
   let chars = 'abcdefghijklmnopqrstuvwxyz1234567890'
   let string = ''
-  for (let index = 0; index < 24; index++) {
+  for (let index = 0; index < length; index++) {
     let random = Math.floor(Math.random() * (chars.length - 0) + 0);
     let uppercase = Math.round(Math.random() * (1 - 0) + 0);
     string = string + chars[random];
@@ -265,6 +265,24 @@ function paramsToAbspath(params) {
 function getEnvPath() {
   return path.resolve(__dirname, ".env");
 }
+
+function writeDataFile(dirPath, overwrite = false) {
+  const dataFile = path.join(dirPath, '.data')
+  if (!fs.existsSync(dataFile) || overwrite) {
+    fs.writeFileSync(dataFile, JSON.stringify({ id: getRandomString() }))
+    if (process.platform == 'win32') fswin.setAttributesSync(dataFile, { IS_HIDDEN: true })
+  }
+}
+
+function isAdmin(decoded) {
+  try {
+    if (decoded.role >= 50) return true
+    return false
+  } catch (error) {
+    return false
+  }
+}
+
 module.exports = {
   readDirectory, deleteDirectory,
   getAbsPath, changeResourceLocation, getRandomString,
@@ -272,4 +290,5 @@ module.exports = {
   checkPathLength, verifyPathAccess, isPrivateDir, getDecodedToken,
   getMimeType, getOrigins, hasBody, checkSeparator, JSONisNotEmpty,
   getArray, verifyToken, paramsToArray, paramsToAbspath, getEnvPath,
+  writeDataFile, isAdmin
 };
