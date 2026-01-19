@@ -2,6 +2,8 @@ import os
 import shutil
 import json
 import pickle
+import sys
+import platform
 current_directory = os.getcwd()
 total, used, free = shutil.disk_usage(current_directory)
 
@@ -27,6 +29,7 @@ def make_json_serializable(obj):
 def readData(index=False):
     info = None 
     program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
+    if platform.system() == 'Linux': program_data = '/etc'
     app_data_dir = os.path.join(program_data, "TizonaHub")
     data_file = os.path.join(app_data_dir, "data.dat")
     try:
@@ -42,9 +45,9 @@ result={
     "used":round(used),
     "free":round(free),
     "serverSize":round(get_directory_size(current_directory)),
-    "serverVersion":readData(2),
-    "clientVersion":readData(1),
-    "managerVersion":readData(3)
+    "serverVersion":readData(2 if platform.system()=='Windows' else 0),
+    "clientVersion":readData(1 if platform.system()=='Windows' else 1)
 }
+if platform.system()=='Windows': result['managerVersion']=readData(3)
 result = make_json_serializable(result)
 print(json.dumps(result)) 
