@@ -35,7 +35,7 @@ def readData(index=False):
     try:
         with open(data_file, "rb") as f:
             info = pickle.load(f)
-            return info if not index else list(info.values())[index]
+            return info if not index else info[index]
     except Exception as e:
         print('Error at readData', e, file=sys.stderr)
         return False
@@ -45,9 +45,9 @@ result={
     "used":round(used),
     "free":round(free),
     "serverSize":round(get_directory_size(current_directory)),
-    "serverVersion":readData(2 if platform.system()=='Windows' else 0),
-    "clientVersion":readData(1 if platform.system()=='Windows' else 1)
+    "serverVersion":readData('serverVersion'),
+    "clientVersion":readData('clientVersion')
 }
-if platform.system()=='Windows': result['managerVersion']=readData(3)
+if platform.system()=='Windows': result['managerVersion']=readData('managerVersion')
 result = make_json_serializable(result)
 print(json.dumps(result)) 
