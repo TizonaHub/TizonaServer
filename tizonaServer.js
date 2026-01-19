@@ -131,33 +131,40 @@ app.get('/directories/*', async (req, res, next) => {
     const range = req.headers.range;
     const extension = path.extname(filePath).toLowerCase();
     const mimeType = await cF.getMimeType(extension)
-    const isVideo = mimeType.toLowerCase().includes('video');
+    const isMedia = mimeType?.toLowerCase().includes('video') || mimeType?.toLowerCase().includes('audio');
 
-
-    if (!isVideo) {
+    if (!isMedia) {
       res.writeHead(200, {
         'Content-Length': fileSize,
         'Content-Type': mimeType || 'application/octet-stream'
       });
       return fs.createReadStream(filePath).pipe(res);
     }
+    if (!range) {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Type': mimeType || 'application/octet-stream'
+      });
+      return fs.createReadStream(filePath).pipe(res);
+    }
 
-    // if it is video, chunk streaming
     const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
     const chunkSize = (end - start) + 1;
-
     const stream = fs.createReadStream(filePath, { start, end });
 
     res.writeHead(206, {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunkSize,
-      'Content-Type': mimeType || 'video/mp4'
+      'Content-Type': mimeType || 'application/octet-stream'
     });
+
     stream.pipe(res);
+
 
   } catch (error) {
     error.status = 500;
